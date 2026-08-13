@@ -1,0 +1,154 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", monospace;
+  --color-ember: var(--ember);
+  --color-ember-foreground: var(--ember-foreground);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-stone: var(--stone);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.75rem;
+  --radius-4xl: 1rem;
+}
+
+:root {
+  --paper: #f6f4f0;
+  --ink: #0c0c0c;
+  --stone: #8a8680;
+  --ember: #c45c26;
+  --ember-foreground: #fffaf6;
+  --background: #f6f4f0;
+  --foreground: #0c0c0c;
+  --card: #fbfaf7;
+  --card-foreground: #0c0c0c;
+  --popover: #fbfaf7;
+  --popover-foreground: #0c0c0c;
+  --primary: #0c0c0c;
+  --primary-foreground: #f6f4f0;
+  --secondary: #ece8e1;
+  --secondary-foreground: #0c0c0c;
+  --muted: #ece8e1;
+  --muted-foreground: #6f6b66;
+  --accent: #ece8e1;
+  --accent-foreground: #0c0c0c;
+  --destructive: #b42318;
+  --border: #e6e2dc;
+  --input: #e6e2dc;
+  --ring: #c45c26;
+  --chart-1: #c45c26;
+  --chart-2: #0c0c0c;
+  --chart-3: #8a8680;
+  --chart-4: #c4a574;
+  --chart-5: #3d3a36;
+  --radius: 0.25rem;
+  --sidebar: #fbfaf7;
+  --sidebar-foreground: #0c0c0c;
+  --sidebar-primary: #0c0c0c;
+  --sidebar-primary-foreground: #f6f4f0;
+  --sidebar-accent: #ece8e1;
+  --sidebar-accent-foreground: #0c0c0c;
+  --sidebar-border: #e6e2dc;
+  --sidebar-ring: #c45c26;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slow-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@utility animate-fade-rise {
+  animation: fade-rise 0.5s ease-out both;
+}
+
+@utility animate-slow-float {
+  animation: slow-float 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-rise,
+  .animate-slow-float {
+    animation: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply font-sans scroll-smooth;
+    hanging-punctuation: first last;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ember;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--ember) 22%, transparent);
+    color: var(--ink);
+  }
+}
