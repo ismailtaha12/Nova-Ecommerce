@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { revenueSeries, topProducts } from "@/lib/data";
+import type { AnalyticsPoint, TopProductSales } from "@/lib/types";
 
 const tooltipStyle = {
   background: "#fbfaf7",
@@ -20,18 +20,23 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-export function RevenueChart() {
+function formatAxisRevenue(value: number) {
+  if (value >= 1000) return `$${value / 1000}k`;
+  return `$${value}`;
+}
+
+export function RevenueChart({ data }: { data: AnalyticsPoint[] }) {
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={revenueSeries}>
+        <AreaChart data={data}>
           <CartesianGrid stroke="#e6e2dc" vertical={false} />
           <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8a8680" }} axisLine={false} tickLine={false} />
           <YAxis
             tick={{ fontSize: 12, fill: "#8a8680" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `$${v / 1000}k`}
+            tickFormatter={(v) => formatAxisRevenue(Number(v))}
           />
           <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`$${Number(v).toLocaleString()}`, "Revenue"]} />
           <Area type="monotone" dataKey="revenue" stroke="#c45c26" fill="#c45c26" fillOpacity={0.12} strokeWidth={1.5} />
@@ -41,11 +46,11 @@ export function RevenueChart() {
   );
 }
 
-export function OrdersChart() {
+export function OrdersChart({ data }: { data: AnalyticsPoint[] }) {
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={revenueSeries}>
+        <BarChart data={data}>
           <CartesianGrid stroke="#e6e2dc" vertical={false} />
           <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8a8680" }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 12, fill: "#8a8680" }} axisLine={false} tickLine={false} />
@@ -57,11 +62,11 @@ export function OrdersChart() {
   );
 }
 
-export function TopProductsChart() {
+export function TopProductsChart({ data }: { data: TopProductSales[] }) {
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={topProducts} layout="vertical" margin={{ left: 24 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
           <CartesianGrid stroke="#e6e2dc" horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 12, fill: "#8a8680" }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: "#0c0c0c" }} axisLine={false} tickLine={false} />

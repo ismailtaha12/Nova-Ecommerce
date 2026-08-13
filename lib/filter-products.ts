@@ -10,6 +10,43 @@ export type ProductFilters = {
   sort?: SortOption;
 };
 
+const CATEGORIES: ProductCategory[] = ["audio", "wearables", "lighting", "power"];
+const SORTS: SortOption[] = ["featured", "newest", "price-asc", "price-desc", "best-selling"];
+const AVAILABILITY: NonNullable<ProductFilters["availability"]>[] = [
+  "all",
+  "in-stock",
+  "out-of-stock",
+];
+
+function parseNumber(value: string | null): number | undefined {
+  if (value == null || value === "") return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+export function parseProductFilters(sp: { get(key: string): string | null }): ProductFilters {
+  const category = sp.get("category");
+  const availability = sp.get("stock");
+  const sort = sp.get("sort");
+  const q = sp.get("q")?.trim();
+
+  return {
+    q: q || undefined,
+    category: CATEGORIES.includes(category as ProductCategory)
+      ? (category as ProductCategory)
+      : "all",
+    minPrice: parseNumber(sp.get("min")),
+    maxPrice: parseNumber(sp.get("max")),
+    minRating: parseNumber(sp.get("rating")),
+    availability: AVAILABILITY.includes(
+      availability as (typeof AVAILABILITY)[number]
+    )
+      ? (availability as (typeof AVAILABILITY)[number])
+      : "all",
+    sort: SORTS.includes(sort as SortOption) ? (sort as SortOption) : "featured",
+  };
+}
+
 export function filterProducts(products: Product[], filters: ProductFilters) {
   let list = [...products];
 

@@ -8,6 +8,7 @@ import { Container } from "@/components/layout/container";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useCart } from "@/lib/stores/cart-store";
 import { useWishlist } from "@/lib/stores/wishlist-store";
+import { useAuth } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -21,6 +22,7 @@ export function SiteHeader() {
   const scrolledRef = useRef(false);
   const { count, setCartOpen, setSearchOpen } = useCart();
   const { ids } = useWishlist();
+  const { user } = useAuth();
 
   useEffect(() => {
     let frame = 0;
@@ -107,10 +109,13 @@ export function SiteHeader() {
           </Button>
           <Link
             href="/account"
-            aria-label="Account"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
+            aria-label={user ? "Account" : "Sign in"}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}
           >
             <User strokeWidth={1.5} />
+            {user ? (
+              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-ember" />
+            ) : null}
           </Link>
           <Link
             href="/account/wishlist"

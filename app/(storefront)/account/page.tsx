@@ -1,23 +1,33 @@
-"use client";
-
 import Link from "next/link";
-import { useAuth } from "@/lib/stores/auth-store";
+import { getSessionUser } from "@/lib/data-access/auth";
+import { listMyAddresses, listMyOrders } from "@/lib/data-access/orders";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 
-export default function AccountOverviewPage() {
-  const { user, orders } = useAuth();
+export const metadata = { title: "Account" };
+
+export default async function AccountOverviewPage() {
+  const [user, orders, addresses] = await Promise.all([
+    getSessionUser(),
+    listMyOrders(),
+    listMyAddresses(),
+  ]);
   if (!user) return null;
+
   const latest = orders[0];
+  const defaultCity =
+    addresses.find((addr) => addr.isDefault)?.city ?? addresses[0]?.city ?? "—";
 
   return (
     <div>
-      <h1 className="text-3xl font-medium tracking-tight">Hello, {user.firstName}.</h1>
+      <h1 className="text-3xl font-medium tracking-tight">
+        Hello, {user.firstName || "there"}.
+      </h1>
       <p className="mt-2 text-muted-foreground">Member since {formatDate(user.joinedAt)}</p>
       <div className="mt-10 grid gap-4 sm:grid-cols-3">
         <Stat label="Orders" value={String(orders.length)} />
         <Stat label="Email" value={user.email} />
-        <Stat label="Default city" value={user.addresses[0]?.city ?? "—"} />
+        <Stat label="Default city" value={defaultCity} />
       </div>
       {latest ? (
         <div className="mt-12">

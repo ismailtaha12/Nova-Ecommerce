@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Product, Review } from "@/lib/types";
-import { formatPrice, stockLabel } from "@/lib/format";
-import { relatedProducts, reviewsFor } from "@/lib/data";
+import { formatDate, formatPrice, stockLabel } from "@/lib/format";
 import { QuantitySelector } from "@/components/product/quantity-selector";
 import { RatingStars } from "@/components/product/rating-stars";
 import { ProductCard } from "@/components/product/product-card";
@@ -14,52 +13,69 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/lib/stores/cart-store";
 import { useWishlist } from "@/lib/stores/wishlist-store";
+import { useAuth } from "@/lib/stores/auth-store";
+import { submitReviewAction } from "@/lib/actions/reviews";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 function Gallery({ images, name }: { images: string[]; name: string }) {
   const [active, setActive] = useState(0);
+  const src = images[active] ?? images[0];
   return (
     <div>
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-        <Image
-          src={images[active]}
-          alt={name}
-          fill
-          priority
-          sizes="(min-width: 1024px) 50vw, 100vw"
-          className="object-contain transition-opacity duration-300"
-        />
+        {src ? (
+          <Image
+            src={src}
+            alt={name}
+            fill
+            priority
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="object-contain transition-opacity duration-300"
+          />
+        ) : null}
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-2">
-        {images.map((src, i) => (
-          <button
-            key={src}
-            type="button"
-            onClick={() => setActive(i)}
-            aria-label={`View image ${i + 1}`}
-            aria-current={active === i}
-            className={cn(
-              "relative aspect-square overflow-hidden bg-muted ring-offset-2 ring-offset-background",
-              active === i && "ring-2 ring-foreground"
-            )}
-          >
-            <Image src={src} alt="" fill className="object-cover" sizes="120px" />
-          </button>
-        ))}
-      </div>
+      {images.length > 1 ? (
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {images.map((imageSrc, i) => (
+            <button
+              key={imageSrc}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`View image ${i + 1}`}
+              aria-current={active === i}
+              className={cn(
+                "relative aspect-square overflow-hidden bg-muted ring-offset-2 ring-offset-background",
+                active === i && "ring-2 ring-foreground"
+              )}
+            >
+              <Image src={imageSrc} alt="" fill className="object-cover" sizes="120px" />
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function ProductDetail({ product }: { product: Product }) {
-  const [variant, setVariant] = useState(product.variants[0].name);
+export function ProductDetail({
+  product,
+  reviews,
+  related,
+}: {
+  product: Product;
+  reviews: Review[];
+  related: Product[];
+}) {
+  const [variant, setVariant] = useState(product.variants[0]?.name ?? "Standard");
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
   const { has, toggle } = useWishlist();
   const router = useRouter();
-  const reviews: Review[] = reviewsFor(product.id);
-  const related = relatedProducts(product);
   const out = product.stock <= 0;
   const wished = has(product.id);
 
@@ -210,13 +226,14 @@ export function ProductDetail({ product }: { product: Product }) {
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {r.author}
-                      {r.verified ? " · Verified" : ""} · {r.date}
+                      {r.verified ? " · Verified" : ""} · {formatDate(r.date)}
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{r.body}</p>
                   </li>
                 ))}
               </ul>
             )}
+            <ReviewForm productId={product.id} slug={product.slug} />
           </TabsContent>
         </Tabs>
       </div>
@@ -246,5 +263,88 @@ export function ProductDetail({ product }: { product: Product }) {
         <Link href="/cart">View bag</Link>
       </p>
     </>
+  );
+}
+
+function ReviewForm({ productId, slug }: { productId: string; slug: string }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [rating, setRating] = useState(5);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!user) {
+    return (
+      <p className="mt-8 max-w-2xl text-sm text-muted-foreground">
+        <Link
+          href={`/login?next=/products/${slug}`}
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>{" "}
+        to write a review.
+      </p>
+    );
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setPending(true);
+    const fd = new FormData(event.currentTarget);
+    const result = await submitReviewAction({
+      productId,
+      rating,
+      title: String(fd.get("title") || ""),
+      body: String(fd.get("body") || ""),
+    });
+    setPending(false);
+    if (result && "error" in result && result.error) {
+      setError(result.error);
+      return;
+    }
+    event.currentTarget.reset();
+    setRating(5);
+    toast.success("Review submitted");
+    router.refresh();
+  }
+
+  return (
+    <form className="mt-10 max-w-2xl space-y-4" onSubmit={onSubmit}>
+      <h3 className="text-lg font-medium">Write a review</h3>
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium">Rating</legend>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRating(value)}
+              className={cn(
+                "size-9 border text-sm",
+                rating === value
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border hover:border-foreground"
+              )}
+              aria-pressed={rating === value}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <div className="space-y-2">
+        <Label htmlFor="review-title">Title</Label>
+        <Input id="review-title" name="title" required className="h-11" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="review-body">Review</Label>
+        <Textarea id="review-body" name="body" required rows={4} />
+      </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <Button type="submit" size="lg" disabled={pending}>
+        {pending ? "Submitting…" : "Submit review"}
+      </Button>
+    </form>
   );
 }

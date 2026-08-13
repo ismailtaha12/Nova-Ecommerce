@@ -1,13 +1,13 @@
-"use client";
-
-import { products } from "@/lib/data";
-import { useWishlist } from "@/lib/stores/wishlist-store";
+import { listWishlistIds } from "@/lib/data-access/orders";
+import { listWishlistProducts } from "@/lib/data-access/products";
 import { ProductCard } from "@/components/product/product-card";
 import { EmptyWishlist } from "@/components/states/empty-state";
 
-export default function WishlistPage() {
-  const { ids } = useWishlist();
-  const list = products.filter((p) => ids.includes(p.id));
+export const metadata = { title: "Wishlist" };
+
+export default async function WishlistPage() {
+  const ids = await listWishlistIds();
+  const list = await listWishlistProducts(ids);
 
   return (
     <div>

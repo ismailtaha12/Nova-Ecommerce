@@ -3,15 +3,15 @@ import { Container, Section } from "@/components/layout/container";
 import { HeroSection } from "@/components/home/hero-section";
 import { CategoryBrowse } from "@/components/home/category-browse";
 import { ProductCard } from "@/components/product/product-card";
-import { products } from "@/lib/data";
+import { getFeaturedProducts } from "@/lib/data-access/products";
 import { ArrowRight } from "lucide-react";
 
-export default function HomePage() {
-  const featured = products.filter((p) => p.featured).slice(0, 3);
+export default async function HomePage() {
+  const featured = await getFeaturedProducts();
 
   return (
     <>
-      <HeroSection />
+      <HeroSection product={featured[0] ?? null} />
 
       <Section>
         <Container>

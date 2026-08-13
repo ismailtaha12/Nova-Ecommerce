@@ -2,11 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { products } from "@/lib/data";
+import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const heroProduct = products[0];
 
 const specs = [
   { value: "40 hrs", label: "Battery life" },
@@ -14,7 +12,7 @@ const specs = [
   { value: "2 yrs", label: "Nova care" },
 ];
 
-export function HeroSection() {
+export function HeroSection({ product }: { product: Product | null }) {
   return (
     <section className="relative overflow-hidden bg-background lg:flex lg:min-h-[calc(100svh-4rem)] lg:items-center">
       <Container className="grid w-full items-center gap-10 py-10 sm:py-12 lg:grid-cols-2 lg:gap-14 lg:py-14">
@@ -22,7 +20,7 @@ export function HeroSection() {
           <p
             className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase animate-fade-rise"
           >
-            New — Pulse
+            {product ? `New — ${product.name}` : "New"}
           </p>
           <h1
             className="mt-5 text-4xl leading-[1.02] font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.5rem] xl:text-[3.75rem] animate-fade-rise"
@@ -48,16 +46,18 @@ export function HeroSection() {
               Shop now
               <ArrowRight className="size-4" strokeWidth={1.5} />
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Starting with{" "}
-              <Link
-                href={`/products/${heroProduct.slug}`}
-                className="font-medium text-foreground underline-offset-4 transition-opacity hover:opacity-70 hover:underline"
-              >
-                {heroProduct.name}
-              </Link>{" "}
-              · {formatPrice(heroProduct.price)}
-            </p>
+            {product ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Starting with{" "}
+                <Link
+                  href={`/products/${product.slug}`}
+                  className="font-medium text-foreground underline-offset-4 transition-opacity hover:opacity-70 hover:underline"
+                >
+                  {product.name}
+                </Link>{" "}
+                · {formatPrice(product.price)}
+              </p>
+            ) : null}
           </div>
           <div
             className="mt-10 border-t border-border pt-8 animate-fade-rise"
@@ -78,46 +78,48 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div
-          className="relative animate-fade-rise"
-          style={{ animationDelay: "240ms" }}
-        >
-          <div className="relative mx-auto h-[min(44vh,380px)] w-full max-w-lg overflow-hidden rounded-[2rem] bg-[#efeae2] sm:h-[min(48vh,420px)] lg:mx-0 lg:h-[min(54vh,500px)] lg:max-w-none">
-            <div
-              aria-hidden="true"
-              className="absolute bottom-[14%] left-1/2 h-8 w-[62%] -translate-x-1/2 rounded-[100%] bg-ink/12 blur-2xl"
-            />
-            <div className="absolute inset-0 flex items-center justify-center p-8 pb-16 animate-slow-float">
-              <Image
-                src={heroProduct.images[0]}
-                alt={heroProduct.name}
-                width={520}
-                height={520}
-                priority
-                className="h-full w-full object-contain drop-shadow-[0_24px_40px_rgba(12,12,12,0.12)]"
+        {product?.images[0] ? (
+          <div
+            className="relative animate-fade-rise"
+            style={{ animationDelay: "240ms" }}
+          >
+            <div className="relative mx-auto h-[min(44vh,380px)] w-full max-w-lg overflow-hidden rounded-[2rem] bg-[#efeae2] sm:h-[min(48vh,420px)] lg:mx-0 lg:h-[min(54vh,500px)] lg:max-w-none">
+              <div
+                aria-hidden="true"
+                className="absolute bottom-[14%] left-1/2 h-8 w-[62%] -translate-x-1/2 rounded-[100%] bg-ink/12 blur-2xl"
               />
+              <div className="absolute inset-0 flex items-center justify-center p-8 pb-16 animate-slow-float">
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  width={520}
+                  height={520}
+                  priority
+                  className="h-full w-full object-contain drop-shadow-[0_24px_40px_rgba(12,12,12,0.12)]"
+                />
+              </div>
+              <Link
+                href={`/products/${product.slug}`}
+                className={cn(
+                  "absolute bottom-5 left-5 flex items-center gap-4 rounded-2xl bg-white px-5 py-3.5",
+                  "shadow-[0_8px_30px_rgba(12,12,12,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
+                )}
+              >
+                <span>
+                  <span className="block text-sm font-medium text-foreground">
+                    {product.name}
+                  </span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground tabular-nums">
+                    {formatPrice(product.price)}
+                  </span>
+                </span>
+                <span className="flex size-9 items-center justify-center rounded-full bg-muted">
+                  <ArrowRight className="size-4" strokeWidth={1.5} />
+                </span>
+              </Link>
             </div>
-            <Link
-              href={`/products/${heroProduct.slug}`}
-              className={cn(
-                "absolute bottom-5 left-5 flex items-center gap-4 rounded-2xl bg-white px-5 py-3.5",
-                "shadow-[0_8px_30px_rgba(12,12,12,0.08)] transition-transform duration-200 hover:-translate-y-0.5"
-              )}
-            >
-              <span>
-                <span className="block text-sm font-medium text-foreground">
-                  {heroProduct.name}
-                </span>
-                <span className="mt-0.5 block text-sm text-muted-foreground tabular-nums">
-                  {formatPrice(heroProduct.price)}
-                </span>
-              </span>
-              <span className="flex size-9 items-center justify-center rounded-full bg-muted">
-                <ArrowRight className="size-4" strokeWidth={1.5} />
-              </span>
-            </Link>
           </div>
-        </div>
+        ) : null}
       </Container>
     </section>
   );

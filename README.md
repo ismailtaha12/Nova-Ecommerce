@@ -1,8 +1,12 @@
 # Nova
 
-**Nova** is a premium consumer-electronics storefront built as a frontend-only demonstration project. It presents a complete shopping experience — product discovery, cart, checkout, customer account, and an admin dashboard — using mock data and client-side state. There is no real backend, payment processor, or database.
+**Nova** is a premium consumer-electronics storefront: product discovery, cart, checkout, customer accounts, and an admin dashboard. Catalog, auth, orders, reviews, wishlist, and inventory are stored in **Supabase (Postgres)**. Next.js 16 is the application backend — Server Components read data, Server Actions mutate it, and Row Level Security protects the database.
+
+Payment is still simulated. Placing an order writes a real paid order and decrements real stock.
 
 Open the site at [http://localhost:3000](http://localhost:3000) after running the dev server.
+
+**Interview prep:** see [INTERVIEW_GUIDE.md](./INTERVIEW_GUIDE.md) for architecture, three core flows, demo script, and common Q&A.
 
 ---
 
@@ -15,9 +19,7 @@ The app is split into two main areas:
 | Area | Route prefix | Purpose |
 |------|--------------|---------|
 | **Storefront** | `/` | Public shopping experience |
-| **Admin** | `/admin` | Back-office dashboard for managing catalog and orders |
-
-All product, order, and customer data lives in static TypeScript files under `lib/data/`. Cart, wishlist, auth, and admin edits persist in the browser via `localStorage`.
+| **Admin** | `/admin` | Back-office dashboard (requires `admin` role) |
 
 ---
 
@@ -26,23 +28,25 @@ All product, order, and customer data lives in static TypeScript files under `li
 ### Storefront
 
 - **Homepage** — Hero, featured products, and category browse
-- **Product catalog** — Filterable listing with category, price, color, rating, and availability filters
-- **Product detail** — Gallery, variants, color swatches, specs, reviews, and related products
+- **Product catalog** — Server-side filters (category, price, rating, availability) synced to the URL
+- **Product detail** — Gallery, variants, specs, live reviews, and related products
 - **Search** — Command palette (`Ctrl/Cmd + K`) and dedicated search page
-- **Cart** — Slide-out drawer with quantity controls
-- **Checkout** — Multi-step mock checkout flow
-- **Account** — Profile, orders, addresses, wishlist, and settings (requires mock login)
-- **Login** — Sign in with any email to use the demo account
+- **Cart** — Guest cart in `localStorage`; prices and stock re-checked at checkout
+- **Checkout** — Sign-in required; mock payment; real order + stock decrement via `place_order()`
+- **Account** — Profile, orders, addresses, wishlist, and settings
+- **Auth** — Email/password sign up, sign in, password reset
 
 ### Admin
 
-- **Dashboard** — KPIs and charts (revenue, orders, top products)
-- **Products** — List, create, edit, and delete products
+Requires an `admin` profile. **The first account that signs up is automatically made admin.**
+
+- **Dashboard** — Live KPIs and charts from real orders
+- **Products** — List, create, edit, archive
 - **Inventory** — Stock levels and adjustment log
-- **Orders** — Order management table
-- **Customers** — Customer list
-- **Categories, coupons, reviews** — Supporting catalog views
-- **Analytics & settings** — Additional admin screens
+- **Orders** — Status updates with timeline events
+- **Customers** — Profiles with order counts and spend
+- **Categories, reviews** — Supporting catalog views
+- **Analytics** — Revenue, orders, and top products from the database
 
 ---
 
@@ -55,23 +59,12 @@ All product, order, and customer data lives in static TypeScript files under `li
 | UI | React 19 |
 | Styling | Tailwind CSS v4 |
 | Components | shadcn/ui + Base UI |
+| Database / Auth / Storage | [Supabase](https://supabase.com) |
+| Validation | Zod |
 | Icons | Lucide React |
 | Charts | Recharts |
 | Toasts | Sonner |
 | Font | Instrument Sans (Google Fonts) |
-
----
-
-## Design system
-
-| Token | Value | Usage |
-|-------|-------|--------|
-| Paper | `#F6F4F0` | Page background |
-| Ink | `#0C0C0C` | Primary text and buttons |
-| Ember | `#C45C26` | Accent / brand highlight |
-| Muted | `#ECE8E1` | Cards, plates, secondary surfaces |
-
-Typography uses **Instrument Sans** with tight tracking on headings and uppercase eyebrow labels for section headers.
 
 ---
 
@@ -81,15 +74,26 @@ Typography uses **Instrument Sans** with tight tracking on headings and uppercas
 
 - Node.js 20+
 - npm
+- A Supabase project (this repo is wired to one via `.env.local`)
 
 ### Install and run
 
 ```bash
 npm install
+cp .env.example .env.local   # then fill in your project URL and publishable key
 npm run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+### Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key — never put the service role key here |
+
+In the Supabase dashboard, add `http://localhost:3000/auth/callback` to **Redirect URLs**. New accounts are auto-confirmed so the first sign-up creates a session immediately.
 
 ### Other scripts
 
@@ -99,11 +103,27 @@ npm run start   # Serve production build
 npm run lint    # Run ESLint
 ```
 
-### Demo login
+### First login
 
-Visit `/login` and enter any email address. Auth is mocked and stored locally — no password or API is required.
+1. Visit `/login` and create an account (password at least 8 characters).
+2. That first user is granted the `admin` role.
+3. Storefront account: `/account`. Admin: `/admin`.
 
-Admin is available at `/admin` without a separate login gate in this demo.
+---
+
+## Architecture
+
+```
+Browser  →  Next.js server (RSC + Server Actions + proxy.ts)
+                 ↓
+         Supabase (Postgres + RLS, Auth, Storage)
+```
+
+- **Reads** — Server Components in `lib/data-access/`
+- **Writes** — Server Actions in `lib/actions/` (auth-checked, Zod-validated)
+- **Checkout** — `place_order()` Postgres function: validates stock, snapshots prices, writes the order, decrements inventory in one transaction
+- **Session** — Cookie-based via `@supabase/ssr`; `proxy.ts` refreshes tokens
+- **Cart** — Client `localStorage` only; never trusted for price or stock
 
 ---
 
@@ -112,34 +132,18 @@ Admin is available at `/admin` without a separate login gate in this demo.
 ```
 app/
 ├── (storefront)/          # Public shop routes
-│   ├── page.tsx           # Homepage
-│   ├── products/          # Catalog + product detail
-│   ├── cart/
-│   ├── checkout/
-│   ├── account/
-│   ├── search/
-│   └── login/
-├── admin/                 # Admin dashboard routes
-├── layout.tsx             # Root layout + fonts
-└── globals.css            # Design tokens + utilities
-
-components/
-├── home/                  # Homepage sections (hero, category browse)
-├── product/               # Cards, listing, PDP, filters
-├── cart/                  # Cart drawer and line items
-├── checkout/              # Checkout flow
-├── account/               # Account navigation and guards
-├── admin/                 # Admin UI (charts, forms, sidebar)
-├── layout/                # Header, footer, container
-├── navigation/            # Logo, search dialog
-└── ui/                    # shadcn/ui primitives
+├── admin/                 # Admin dashboard (role-gated)
+├── auth/                  # OAuth/email callback + password update
+└── layout.tsx
 
 lib/
-├── data/                  # Mock catalog (products, orders, reviews, …)
-├── stores/                # Cart, wishlist, auth, admin (localStorage)
-├── filter-products.ts     # Catalog filtering and sort logic
-├── types.ts               # Shared TypeScript types
-└── format.ts              # Price and display helpers
+├── supabase/              # Browser/server clients + Database types
+├── data-access/           # Server queries
+├── actions/               # Server Actions
+├── catalog.ts             # Static category navigation
+└── stores/                # Cart (localStorage) + session/wishlist UI
+
+supabase/migrations/       # Schema, RLS, seed catalog
 ```
 
 ---
@@ -155,9 +159,9 @@ lib/
 | `/products/[slug]` | Product detail page |
 | `/search` | Search results |
 | `/cart` | Cart page |
-| `/checkout` | Checkout flow |
+| `/checkout` | Checkout (signed in) |
 | `/account` | Customer account hub |
-| `/login` | Mock sign-in |
+| `/login` | Sign in / create account |
 
 ### Admin
 
@@ -167,63 +171,15 @@ lib/
 | `/admin/products` | Product management |
 | `/admin/orders` | Orders |
 | `/admin/inventory` | Stock |
-| `/admin/customers` | Customers |
-
----
-
-## State and data
-
-### Mock data (`lib/data/`)
-
-- **`products.ts`** — Product catalog, categories, and helpers
-- **`catalog.ts`** — Orders, reviews, coupons, customers, browse categories, and analytics seed data
-
-### Client stores (`lib/stores/`)
-
-| Store | Persists | Purpose |
-|-------|----------|---------|
-| `cart-store` | Yes | Cart items and drawer UI |
-| `wishlist-store` | Yes | Saved products |
-| `auth-store` | Yes | Mock customer session |
-| `admin-store` | Yes | Admin product CRUD overrides |
-
-Cart and wishlist survive page reloads. Admin product edits merge with the seed catalog in memory and local storage.
 
 ---
 
 ## Product categories
 
-Nova organizes products into four catalog categories:
-
 - **Audio** — Headphones, earbuds, speakers
 - **Wearables** — Watches and companions
 - **Lighting** — Desk and room lighting
 - **Power** — Charging and power accessories
-
-The homepage category browse also surfaces **Phones**, **Tablets**, and **Home** as navigation entry points mapped to relevant product filters.
-
----
-
-## Configuration
-
-`next.config.ts` includes:
-
-- Remote image support for Unsplash
-- Turbopack root configuration
-- `allowedDevOrigins` for local network dev access
-
-Product images may be served from `/public/products/` (local assets) or Unsplash URLs defined in the seed data.
-
----
-
-## Limitations
-
-This is a **demonstration project**, not production e-commerce software:
-
-- No real payments, shipping, or email
-- No server-side API or database
-- Admin changes are local to the browser
-- Inventory and orders are static mock records
 
 ---
 

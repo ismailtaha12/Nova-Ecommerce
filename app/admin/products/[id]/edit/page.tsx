@@ -1,26 +1,28 @@
-"use client";
-
-import { use } from "react";
-import { ProductUnavailable } from "@/components/states/empty-state";
-import { useAdmin } from "@/lib/stores/admin-store";
+import { notFound } from "next/navigation";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { ProductForm } from "@/components/admin/product-form";
+import { getAdminProductById } from "@/lib/data-access/admin";
 
-export default function EditProductPage({
+export default async function EditProductPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const { products } = useAdmin();
-  const product = products.find((p) => p.id === id);
-  if (!product) return <ProductUnavailable />;
+  const { id } = await params;
+  const product = await getAdminProductById(id);
+  if (!product) notFound();
 
   return (
     <div>
-      <h1 className="text-3xl font-medium tracking-tight">Edit {product.name}</h1>
-      <div className="mt-8">
-        <ProductForm product={product} />
-      </div>
+      <AdminPageHeader
+        title={`Edit ${product.name}`}
+        description={product.archived ? "This product is archived." : product.slug}
+        crumbs={[
+          { href: "/admin/products", label: "Products" },
+          { label: product.name },
+        ]}
+      />
+      <ProductForm product={product} />
     </div>
   );
 }

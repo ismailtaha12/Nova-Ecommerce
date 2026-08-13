@@ -1,13 +1,11 @@
 "use client";
 
 import { toast } from "sonner";
-import { useAuth } from "@/lib/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { signOutAction } from "@/lib/actions/auth";
 
 export default function SettingsPage() {
-  const { logout } = useAuth();
-
   return (
     <div>
       <h1 className="text-3xl font-medium tracking-tight">Settings</h1>
@@ -36,16 +34,11 @@ export default function SettingsPage() {
           Save preferences
         </Button>
         <div className="border-t border-border pt-6">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              logout();
-              toast("Signed out");
-            }}
-          >
-            Sign out
-          </Button>
+          <form action={signOutAction}>
+            <Button type="submit" variant="ghost">
+              Sign out
+            </Button>
+          </form>
         </div>
       </div>
     </div>

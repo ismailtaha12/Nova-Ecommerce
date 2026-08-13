@@ -2,12 +2,19 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { SearchDialog } from "@/components/navigation/search-dialog";
+import { listProductSummaries } from "@/lib/data-access/products";
+import { getStoreSettings } from "@/lib/data-access/admin";
 
-export default function StorefrontLayout({
+export default async function StorefrontLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [products, settings] = await Promise.all([
+    listProductSummaries(),
+    getStoreSettings(),
+  ]);
+
   return (
     <>
       <a
@@ -20,9 +27,13 @@ export default function StorefrontLayout({
       <main id="main-content" className="flex-1">
         {children}
       </main>
-      <SiteFooter />
+      <SiteFooter
+        storeName={settings.storeName}
+        origin={settings.origin}
+        supportEmail={settings.supportEmail}
+      />
       <CartDrawer />
-      <SearchDialog />
+      <SearchDialog products={products} />
     </>
   );
 }

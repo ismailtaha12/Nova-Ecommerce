@@ -1,23 +1,29 @@
-"use client";
-
-import { use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ProductUnavailable } from "@/components/states/empty-state";
-import { useAuth } from "@/lib/stores/auth-store";
+import { notFound } from "next/navigation";
+import { getOrderById } from "@/lib/data-access/orders";
 import { formatDate, formatPrice } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export default function OrderDetailPage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const { orders } = useAuth();
-  const order = orders.find((o) => o.id === id || o.number === id);
-  if (!order) return <ProductUnavailable />;
+  const { id } = await params;
+  const order = await getOrderById(id);
+  return { title: order?.number ?? "Order" };
+}
+
+export default async function OrderDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const order = await getOrderById(id);
+  if (!order) notFound();
 
   return (
     <div>
@@ -32,7 +38,7 @@ export default function OrderDetailPage({
       </div>
 
       <ol className="mt-10 space-y-4">
-        {order.timeline.map((event, i) => (
+        {order.timeline.map((event) => (
           <li key={event.label} className="flex gap-4">
             <span
               className={cn(
@@ -48,7 +54,6 @@ export default function OrderDetailPage({
                 <p className="text-xs text-muted-foreground">Pending</p>
               )}
             </div>
-            {i < order.timeline.length - 1 ? null : null}
           </li>
         ))}
       </ol>
@@ -58,7 +63,9 @@ export default function OrderDetailPage({
         {order.items.map((item) => (
           <li key={item.slug + item.variant} className="flex gap-4 py-4">
             <Link href={`/products/${item.slug}`} className="relative size-20 overflow-hidden bg-muted">
-              <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
+              {item.image ? (
+                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
+              ) : null}
             </Link>
             <div className="flex-1">
               <p className="text-sm font-medium">{item.name}</p>

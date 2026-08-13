@@ -2,16 +2,36 @@ import { Suspense } from "react";
 import { Container } from "@/components/layout/container";
 import { ProductListing } from "@/components/product/product-listing";
 import { ProductGridSkeleton } from "@/components/states/skeletons";
+import { parseProductFilters } from "@/lib/filter-products";
+import { listProducts } from "@/lib/data-access/products";
 
 export const metadata = {
   title: "Store",
 };
 
-export default function ProductsPage() {
+function searchParamsGet(sp: Record<string, string | string[] | undefined>) {
+  return {
+    get(key: string): string | null {
+      const value = sp[key];
+      if (Array.isArray(value)) return value[0] ?? null;
+      return value ?? null;
+    },
+  };
+}
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
+  const filters = parseProductFilters(searchParamsGet(sp));
+  const products = await listProducts(filters);
+
   return (
     <Container>
       <Suspense fallback={<ProductGridSkeleton />}>
-        <ProductListing />
+        <ProductListing products={products} />
       </Suspense>
     </Container>
   );

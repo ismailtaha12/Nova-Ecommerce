@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Container, Section } from "@/components/layout/container";
-import { browseCategories } from "@/lib/data";
+import { browseCategories } from "@/lib/catalog";
 
 export function CategoryBrowse() {
   return (

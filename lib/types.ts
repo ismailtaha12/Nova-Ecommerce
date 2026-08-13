@@ -27,6 +27,7 @@ export type Product = {
   bestSeller?: boolean;
   newest?: boolean;
   onSale?: boolean;
+  archived?: boolean;
   specs: Record<string, string>;
   shipping: string;
   returns: string;
@@ -66,6 +67,16 @@ export type Customer = {
   addresses: Address[];
 };
 
+export type SessionUser = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  role: "customer" | "admin";
+  joinedAt: string;
+};
+
 export type OrderStatus = "processing" | "paid" | "fulfilled" | "shipped" | "delivered" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 export type FulfillmentStatus = "unfulfilled" | "partial" | "fulfilled" | "shipped";
@@ -90,6 +101,9 @@ export type Order = {
   id: string;
   number: string;
   date: string;
+  userId: string;
+  customerName?: string;
+  customerEmail?: string;
   paymentStatus: PaymentStatus;
   fulfillmentStatus: FulfillmentStatus;
   status: OrderStatus;
@@ -123,23 +137,42 @@ export type InventoryLog = {
   date: string;
 };
 
-export type Coupon = {
-  id: string;
-  code: string;
-  description: string;
-  discount: string;
-  status: "active" | "expired" | "scheduled";
-  uses: number;
-  limit: number;
-};
-
 export type AdminCustomer = {
   id: string;
   name: string;
   email: string;
+  phone: string;
   orders: number;
   spent: number;
   joinedAt: string;
+};
+
+export type AdminCustomerDetail = AdminCustomer & {
+  role: SessionUser["role"];
+  addresses: Address[];
+  orderHistory: Order[];
+};
+
+export type StoreSettings = {
+  storeName: string;
+  origin: string;
+  supportEmail: string;
+  updatedAt: string;
+};
+
+export type AnalyticsRange = "30d" | "90d" | "all";
+
+export type AnalyticsPoint = { month: string; revenue: number; orders: number };
+export type TopProductSales = { name: string; sales: number; productId?: string };
+
+export type AdminDashboard = {
+  revenue: number;
+  orders: number;
+  customers: number;
+  aov: number;
+  attentionOrders: Order[];
+  recentOrders: Order[];
+  lowStock: Product[];
 };
 
 export type SortOption =
@@ -159,4 +192,21 @@ export type CheckoutState = {
   address: Omit<Address, "id" | "label" | "isDefault">;
   delivery: DeliveryMethod;
   paymentMethod: "card" | "apple-mock";
+};
+
+export const defaultCheckout: CheckoutState = {
+  email: "",
+  firstName: "",
+  lastName: "",
+  phone: "",
+  address: {
+    name: "",
+    line1: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "United States",
+  },
+  delivery: "standard",
+  paymentMethod: "card",
 };

@@ -1,18 +1,18 @@
-"use client";
-
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/layout/container";
 import { ProductCard } from "@/components/product/product-card";
 import { EmptySearch } from "@/components/states/empty-state";
-import { products } from "@/lib/data";
-import { filterProducts } from "@/lib/filter-products";
-import { ProductGridSkeleton } from "@/components/states/skeletons";
+import { listProducts } from "@/lib/data-access/products";
 
-function SearchResults() {
-  const params = useSearchParams();
-  const q = params.get("q") ?? "";
-  const list = filterProducts(products, { q, sort: "featured" });
+export const metadata = { title: "Search" };
+
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>;
+}) {
+  const sp = await searchParams;
+  const q = Array.isArray(sp.q) ? (sp.q[0] ?? "") : (sp.q ?? "");
+  const list = await listProducts({ q, sort: "featured" });
 
   return (
     <Container className="py-16">
@@ -30,13 +30,5 @@ function SearchResults() {
         </div>
       )}
     </Container>
-  );
-}
-
-export default function SearchPage() {
-  return (
-    <Suspense fallback={<ProductGridSkeleton />}>
-      <SearchResults />
-    </Suspense>
   );
 }

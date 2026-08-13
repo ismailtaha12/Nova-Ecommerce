@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
-import { products } from "@/lib/data";
-import { filterProducts, type ProductFilters } from "@/lib/filter-products";
-import type { ProductCategory, SortOption } from "@/lib/types";
+import { type ProductFilters } from "@/lib/filter-products";
+import type { Product, ProductCategory, SortOption } from "@/lib/types";
 import { ProductCard } from "@/components/product/product-card";
 import { EmptySearch } from "@/components/states/empty-state";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { categories } from "@/lib/data/products";
+import { categories } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
 const SORTS: { value: SortOption; label: string }[] = [
@@ -329,16 +328,18 @@ function FilterPanel({
 }
 
 export function ProductListing({
+  products,
   title = "Store",
   subtitle = "Every object Nova makes, in one place.",
 }: {
+  products: Product[];
   title?: string;
   subtitle?: string;
 }) {
   const [filters, set] = useListingFilters();
   const [open, setOpen] = useState(false);
   const merged = { ...filters };
-  const list = filterProducts(products, merged);
+  const list = products;
   const activeCount = countActiveFilters(merged);
 
   return (

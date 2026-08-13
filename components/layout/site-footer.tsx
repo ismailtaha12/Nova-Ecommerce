@@ -39,14 +39,28 @@ const columns = [
   },
 ];
 
-export function SiteFooter() {
+export function SiteFooter({
+  storeName = "Nova",
+  origin = "San Francisco",
+  supportEmail = "support@nova.example",
+}: {
+  storeName?: string;
+  origin?: string;
+  supportEmail?: string;
+}) {
   return (
     <footer className="mt-auto border-t border-border bg-background">
       <Container className="grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <NovaMark />
           <p className="mt-6 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Consumer electronics, designed with restraint. Designed in San Francisco.
+            Consumer electronics, designed with restraint. Designed in {origin}.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Support:{" "}
+            <a href={`mailto:${supportEmail}`} className="hover:text-foreground">
+              {supportEmail}
+            </a>
           </p>
           <NewsletterForm />
         </div>
@@ -71,7 +85,7 @@ export function SiteFooter() {
         ))}
       </Container>
       <Container className="flex flex-col gap-2 border-t border-border py-6 text-xs text-muted-foreground sm:flex-row sm:justify-between">
-        <p>© {new Date().getFullYear()} Nova. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} {storeName}. All rights reserved.</p>
         <p>A fictional storefront for demonstration.</p>
       </Container>
     </footer>

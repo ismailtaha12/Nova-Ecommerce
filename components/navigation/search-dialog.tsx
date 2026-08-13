@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { products } from "@/lib/data";
+import type { ProductSummary } from "@/lib/data-access/products";
 import {
   Command,
   CommandDialog,
@@ -14,7 +14,7 @@ import {
 import { useCart } from "@/lib/stores/cart-store";
 import { formatPrice } from "@/lib/format";
 
-export function SearchDialog() {
+export function SearchDialog({ products }: { products: ProductSummary[] }) {
   const { searchOpen, setSearchOpen } = useCart();
   const router = useRouter();
 

@@ -10,11 +10,16 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div className="py-16 text-center">
-        <h1 className="text-3xl font-medium tracking-tight">Sign in to continue</h1>
+        <h1 className="text-3xl font-medium tracking-tight">
+          Sign in to continue
+        </h1>
         <p className="mt-3 text-muted-foreground">
           Account, orders, and wishlist live behind a demonstration sign-in.
         </p>
-        <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "mt-8 inline-flex")}>
+        <Link
+          href="/login"
+          className={cn(buttonVariants({ size: "lg" }), "mt-8 inline-flex")}
+        >
           Sign in
         </Link>
       </div>

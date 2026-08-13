@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/lib/stores/cart-store";
 import { useAuth, defaultCheckout } from "@/lib/stores/auth-store";
-import type { CheckoutState, DeliveryMethod, Order } from "@/lib/types";
+import type { CheckoutState, DeliveryMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { placeOrderAction } from "@/lib/actions/checkout";
 
 const STEPS = [
   "Information",
@@ -30,29 +31,34 @@ const deliveryOptions: { id: DeliveryMethod; name: string; detail: string; price
 ];
 
 export function CheckoutFlow() {
-  const { items, subtotal, shipping, tax, total, clear } = useCart();
-  const { user, addOrder } = useAuth();
+  const { items, total, clear } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [fail, setFail] = useState(false);
+  const [pending, setPending] = useState(false);
   const [data, setData] = useState<CheckoutState>({
     ...defaultCheckout,
     email: user?.email ?? "",
     firstName: user?.firstName ?? "",
     lastName: user?.lastName ?? "",
     phone: user?.phone ?? "",
-    address: user?.addresses[0]
-      ? {
-          name: user.addresses[0].name,
-          line1: user.addresses[0].line1,
-          line2: user.addresses[0].line2,
-          city: user.addresses[0].city,
-          state: user.addresses[0].state,
-          zip: user.addresses[0].zip,
-          country: user.addresses[0].country,
-        }
-      : defaultCheckout.address,
   });
+
+  if (!user) {
+    return (
+      <Container className="py-16">
+        <h1 className="text-4xl font-medium tracking-tight">Checkout</h1>
+        <p className="mt-4 text-muted-foreground">Sign in to complete your order.</p>
+        <Link
+          href="/login?next=/checkout"
+          className="mt-6 inline-flex h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>
+      </Container>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -72,51 +78,44 @@ export function CheckoutFlow() {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
-  function placeOrder() {
+  async function placeOrder() {
     if (fail) {
       toast.error("Payment could not be processed. Try again.");
       return;
     }
-    const id = `ord-${Math.floor(Math.random() * 90000 + 10000)}`;
-    const number = `NV-${id.slice(4)}`;
-    const order: Order = {
-      id,
-      number,
-      date: new Date().toISOString().slice(0, 10),
-      paymentStatus: "paid",
-      fulfillmentStatus: "unfulfilled",
-      status: "processing",
-      items: items.map((i) => ({
-        productId: i.productId,
-        slug: i.slug,
-        name: i.name,
-        image: i.image,
-        variant: i.variant,
-        price: i.price,
-        quantity: i.quantity,
+    setPending(true);
+    const name =
+      data.address.name.trim() || `${data.firstName} ${data.lastName}`.trim();
+    const result = await placeOrderAction({
+      items: items.map((item) => ({
+        productId: item.productId,
+        variant: item.variant,
+        quantity: item.quantity,
       })),
       shippingAddress: {
-        id: "new",
-        label: "Shipping",
-        ...data.address,
-        name: `${data.firstName} ${data.lastName}`,
+        name,
+        line1: data.address.line1,
+        line2: data.address.line2,
+        city: data.address.city,
+        state: data.address.state,
+        zip: data.address.zip,
+        country: data.address.country || "United States",
       },
-      subtotal,
-      shipping,
-      tax,
-      total,
-      timeline: [
-        { label: "Order placed", date: new Date().toISOString(), complete: true },
-        { label: "Payment confirmed", date: new Date().toISOString(), complete: true },
-        { label: "Fulfilled", date: "", complete: false },
-        { label: "Shipped", date: "", complete: false },
-        { label: "Delivered", date: "", complete: false },
-      ],
-    };
-    addOrder(order);
+      delivery: data.delivery,
+    });
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      setPending(false);
+      return;
+    }
+    if (!("orderId" in result) || !result.orderId) {
+      toast.error("Order could not be placed.");
+      setPending(false);
+      return;
+    }
     clear();
     toast.success("Order placed");
-    router.push(`/account/orders/${id}`);
+    router.push(`/account/orders/${result.orderId}`);
   }
 
   return (
@@ -345,8 +344,15 @@ export function CheckoutFlow() {
                 <Button type="button" variant="outline" size="lg" onClick={() => setStep(3)}>
                   Back
                 </Button>
-                <Button type="button" variant="brand" size="lg" className="flex-1" onClick={placeOrder}>
-                  Place order
+                <Button
+                  type="button"
+                  variant="brand"
+                  size="lg"
+                  className="flex-1"
+                  disabled={pending}
+                  onClick={() => void placeOrder()}
+                >
+                  {pending ? "Placing order…" : "Place order"}
                 </Button>
               </div>
             </div>
