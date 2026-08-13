@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import type { Product, Review } from "@/lib/types";
 import { formatPrice, stockLabel } from "@/lib/format";
 import { relatedProducts, reviewsFor } from "@/lib/data";
-import { ColorSwatches } from "@/components/product/color-swatches";
 import { QuantitySelector } from "@/components/product/quantity-selector";
 import { RatingStars } from "@/components/product/rating-stars";
 import { ProductCard } from "@/components/product/product-card";
@@ -54,7 +53,6 @@ function Gallery({ images, name }: { images: string[]; name: string }) {
 }
 
 export function ProductDetail({ product }: { product: Product }) {
-  const [color, setColor] = useState(product.colors[0].name);
   const [variant, setVariant] = useState(product.variants[0].name);
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
@@ -66,7 +64,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const wished = has(product.id);
 
   function addToCart() {
-    addItem({ product, color, variant, quantity: qty });
+    addItem({ product, variant, quantity: qty });
   }
 
   function buyNow() {
@@ -101,13 +99,6 @@ export function ProductDetail({ product }: { product: Product }) {
           <p className="mt-6 max-w-md leading-relaxed text-muted-foreground">
             {product.description}
           </p>
-
-          <div className="mt-8">
-            <p className="mb-3 text-xs tracking-wide text-muted-foreground">
-              Color — {color}
-            </p>
-            <ColorSwatches colors={product.colors} value={color} onChange={setColor} />
-          </div>
 
           <fieldset className="mt-8">
             <legend className="mb-3 text-xs tracking-wide text-muted-foreground">

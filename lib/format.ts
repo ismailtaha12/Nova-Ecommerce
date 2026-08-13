@@ -27,8 +27,8 @@ export function stockLabel(stock: number) {
   return "In stock";
 }
 
-export function skuFor(productId: string, color?: string, variant?: string) {
-  const parts = [productId, color, variant]
+export function skuFor(productId: string, variant?: string) {
+  const parts = [productId, variant]
     .filter(Boolean)
     .map((s) => s!.replace(/\s+/g, "").slice(0, 8).toUpperCase());
   return `NV-${parts.join("-")}`;

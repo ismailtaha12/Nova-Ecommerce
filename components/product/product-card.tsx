@@ -2,12 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Plus } from "lucide-react";
+import { ArrowRight, Heart, Plus } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ColorSwatches } from "@/components/product/color-swatches";
 import { RatingStars } from "@/components/product/rating-stars";
 import { useCart } from "@/lib/stores/cart-store";
 import { useWishlist } from "@/lib/stores/wishlist-store";
@@ -35,7 +34,7 @@ export function ProductCard({
         <div className="relative">
           <Link
             href={`/products/${product.slug}`}
-            className="relative block aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-[#efeae2]"
+            className="relative block aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-border/70 bg-card"
           >
             <div
               aria-hidden="true"
@@ -99,13 +98,12 @@ export function ProductCard({
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {product.tagline}
           </p>
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-4">
             <RatingStars
               rating={product.rating}
               count={product.reviewCount}
               compact
             />
-            <ColorSwatches colors={product.colors} size="sm" />
           </div>
         </div>
       </article>
@@ -113,80 +111,93 @@ export function ProductCard({
   }
 
   return (
-    <article className="group relative flex flex-col">
-      <Link href={`/products/${product.slug}`} className="relative block overflow-hidden bg-muted">
-        <div className="relative aspect-[4/5]">
+    <article className="group flex flex-col">
+      <div className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-card">
+        <Link
+          href={`/products/${product.slug}`}
+          className="relative block aspect-[4/5]"
+        >
+          <div
+            aria-hidden="true"
+            className="absolute bottom-[20%] left-1/2 h-5 w-[48%] -translate-x-1/2 rounded-[100%] bg-ink/8 blur-xl"
+          />
           <Image
             src={product.images[0]}
             alt={product.name}
             fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-contain transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-contain p-8 pb-14 transition-transform duration-500 ease-out group-hover:scale-[1.03] drop-shadow-[0_18px_32px_rgba(12,12,12,0.12)]"
           />
-        </div>
-        {product.onSale ? (
-          <span className="absolute top-3 left-3 bg-ember px-2 py-0.5 text-[10px] tracking-widest text-ember-foreground uppercase">
-            Sale
-          </span>
-        ) : null}
-        {out ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-background/55 text-xs tracking-widest uppercase">
-            Out of stock
-          </span>
-        ) : null}
-      </Link>
+          {out ? (
+            <span className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-background/50 text-xs font-medium tracking-wide uppercase">
+              Out of stock
+            </span>
+          ) : null}
+        </Link>
 
-      <div className="flex items-start justify-between gap-3 pt-4">
-        <div className="min-w-0">
-          <h3 className="truncate text-[15px] font-medium tracking-tight">
-            <Link href={`/products/${product.slug}`} className="hover:underline underline-offset-4">
-              {product.name}
-            </Link>
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">{product.tagline}</p>
-        </div>
         <button
           type="button"
           aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={wished}
           onClick={() => toggle(product)}
-          className="mt-0.5 shrink-0 text-foreground/70 transition-colors hover:text-foreground"
+          className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-full bg-white shadow-[0_4px_16px_rgba(12,12,12,0.08)] transition-transform hover:scale-105"
         >
-          <Heart className={cn("size-4", wished && "fill-ember text-ember")} strokeWidth={1.5} />
+          <Heart
+            className={cn("size-4", wished && "fill-foreground text-foreground")}
+            strokeWidth={1.5}
+          />
         </button>
-      </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-sm tabular-nums">{formatPrice(product.price)}</span>
-          {product.compareAtPrice ? (
-            <span className="text-xs text-muted-foreground line-through tabular-nums">
-              {formatPrice(product.compareAtPrice)}
-            </span>
-          ) : null}
-        </div>
-        <RatingStars rating={product.rating} />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <ColorSwatches colors={product.colors} size="sm" />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={out}
-          className="opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100"
-          onClick={() =>
-            addItem({
-              product,
-              color: product.colors[0].name,
-              variant: product.variants[0].name,
-            })
-          }
+        <Link
+          href={`/products/${product.slug}`}
+          className={cn(
+            "absolute bottom-4 left-4 flex items-center gap-4 rounded-2xl bg-white px-4 py-3",
+            "shadow-[0_8px_30px_rgba(12,12,12,0.08)] transition-all duration-200 hover:-translate-y-0.5",
+            "md:group-hover:pointer-events-none md:group-hover:translate-y-1 md:group-hover:opacity-0"
+          )}
         >
-          <Plus data-icon="inline-start" />
-          Quick add
-        </Button>
+          <span>
+            <span className="block text-sm font-medium text-foreground">{product.name}</span>
+            <span className="mt-0.5 block text-sm text-muted-foreground tabular-nums">
+              {formatPrice(product.price)}
+            </span>
+          </span>
+          <span className="flex size-9 items-center justify-center rounded-full bg-muted">
+            <ArrowRight className="size-4" strokeWidth={1.5} />
+          </span>
+        </Link>
+
+        <div
+          className={cn(
+            "absolute inset-x-4 bottom-4 transition-all duration-200",
+            "opacity-100 translate-y-0",
+            "md:pointer-events-none md:translate-y-2 md:opacity-0",
+            "md:group-hover:pointer-events-auto md:group-hover:translate-y-0 md:group-hover:opacity-100",
+            "md:group-focus-within:pointer-events-auto md:group-focus-within:translate-y-0 md:group-focus-within:opacity-100"
+          )}
+        >
+          <Button
+            type="button"
+            disabled={out}
+            className="h-11 w-full rounded-full bg-foreground text-background shadow-[0_8px_24px_rgba(12,12,12,0.12)] hover:bg-foreground/90"
+            onClick={() =>
+              addItem({
+                product,
+                variant: product.variants[0].name,
+              })
+            }
+          >
+            <Plus className="size-4" strokeWidth={1.5} />
+            Quick add
+          </Button>
+        </div>
+      </div>
+
+      <div className="pt-4">
+        <p className="text-sm text-muted-foreground">{product.tagline}</p>
+        <div className="mt-3">
+          <RatingStars rating={product.rating} count={product.reviewCount} compact />
+        </div>
       </div>
     </article>
   );

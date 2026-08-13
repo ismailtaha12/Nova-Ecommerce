@@ -91,7 +91,6 @@ export function CheckoutFlow() {
         slug: i.slug,
         name: i.name,
         image: i.image,
-        color: i.color,
         variant: i.variant,
         price: i.price,
         quantity: i.quantity,
@@ -362,7 +361,7 @@ export function CheckoutFlow() {
                 <span>
                   {i.name} × {i.quantity}
                   <span className="block text-xs text-muted-foreground">
-                    {i.color} · {i.variant}
+                    {i.variant}
                   </span>
                 </span>
                 <span className="tabular-nums">${(i.price * i.quantity).toFixed(2)}</span>

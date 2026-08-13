@@ -39,7 +39,6 @@ export function ProductForm({ product }: { product?: Product }) {
             rating: 0,
             reviewCount: 0,
             category: "audio",
-            colors: [{ name: "Graphite", hex: "#2b2b2b" }],
             variants: [{ id: "standard", name: "Standard" }],
             images: [
               "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1600&q=80",

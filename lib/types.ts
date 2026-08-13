@@ -1,8 +1,3 @@
-export type ProductColor = {
-  name: string;
-  hex: string;
-};
-
 export type ProductVariant = {
   id: string;
   name: string;
@@ -25,7 +20,6 @@ export type Product = {
   rating: number;
   reviewCount: number;
   category: ProductCategory;
-  colors: ProductColor[];
   variants: ProductVariant[];
   images: string[];
   stock: number;
@@ -81,7 +75,6 @@ export type OrderLine = {
   slug: string;
   name: string;
   image: string;
-  color: string;
   variant: string;
   price: number;
   quantity: number;
@@ -115,7 +108,6 @@ export type CartItem = {
   slug: string;
   name: string;
   image: string;
-  color: string;
   variant: string;
   price: number;
   quantity: number;

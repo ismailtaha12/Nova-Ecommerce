@@ -4,7 +4,6 @@ export type ProductFilters = {
   category?: ProductCategory | "all";
   minPrice?: number;
   maxPrice?: number;
-  colors?: string[];
   minRating?: number;
   availability?: "all" | "in-stock" | "out-of-stock";
   q?: string;
@@ -36,12 +35,6 @@ export function filterProducts(products: Product[], filters: ProductFilters) {
     list = list.filter((p) => p.price <= filters.maxPrice!);
   }
 
-  if (filters.colors?.length) {
-    list = list.filter((p) =>
-      p.colors.some((c) => filters.colors!.includes(c.name))
-    );
-  }
-
   if (filters.minRating) {
     list = list.filter((p) => p.rating >= filters.minRating!);
   }
@@ -71,29 +64,3 @@ export function filterProducts(products: Product[], filters: ProductFilters) {
 
   return list;
 }
-
-export const allColors = [
-  "Graphite",
-  "Sand",
-  "Ink Blue",
-  "Walnut",
-  "Slate",
-  "Cloud",
-  "Charcoal",
-  "Clay",
-  "Midnight",
-  "Fog",
-  "Oat",
-  "Forest",
-  "Terracotta",
-  "Steel",
-  "Black DLC",
-  "Gold",
-  "Trail",
-  "Ocean",
-  "Flame",
-  "Aluminum",
-  "Black",
-  "Ivory",
-  "Stone",
-];

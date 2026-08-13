@@ -9,7 +9,6 @@ type CartContextValue = {
   items: CartItem[];
   addItem: (input: {
     product: Product;
-    color: string;
     variant: string;
     quantity?: number;
   }) => void;
@@ -31,8 +30,8 @@ const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = "nova-cart";
 const empty: CartItem[] = [];
 
-function itemKey(productId: string, color: string, variant: string) {
-  return `${productId}::${color}::${variant}`;
+function itemKey(productId: string, variant: string) {
+  return `${productId}::${variant}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -43,12 +42,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     ({
       product,
-      color,
       variant,
       quantity = 1,
     }: {
       product: Product;
-      color: string;
       variant: string;
       quantity?: number;
     }) => {
@@ -56,7 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         toast.error("This product is currently unavailable.");
         return;
       }
-      const key = itemKey(product.id, color, variant);
+      const key = itemKey(product.id, variant);
       setItems((prev) => {
         const existing = prev.find((i) => i.key === key);
         if (existing) {
@@ -75,7 +72,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
             slug: product.slug,
             name: product.name,
             image: product.images[0],
-            color,
             variant,
             price: product.price,
             quantity,

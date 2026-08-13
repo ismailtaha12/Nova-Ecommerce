@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { products } from "@/lib/data";
@@ -50,7 +50,6 @@ function useListingFilters(): [
     category: (params.get("category") as ProductCategory) ?? "all",
     minPrice: params.get("min") ? Number(params.get("min")) : 0,
     maxPrice: params.get("max") ? Number(params.get("max")) : DEFAULT_MAX_PRICE,
-    colors: params.get("color")?.split(",").filter(Boolean) ?? [],
     minRating: params.get("rating") ? Number(params.get("rating")) : undefined,
     availability: (params.get("stock") as ProductFilters["availability"]) ?? "all",
     sort: (params.get("sort") as SortOption) ?? "featured",
@@ -65,7 +64,6 @@ function useListingFilters(): [
     if (next.maxPrice && next.maxPrice < DEFAULT_MAX_PRICE) {
       sp.set("max", String(next.maxPrice));
     }
-    if (next.colors?.length) sp.set("color", next.colors.join(","));
     if (next.minRating) sp.set("rating", String(next.minRating));
     if (next.availability && next.availability !== "all") sp.set("stock", next.availability);
     if (next.sort && next.sort !== "featured") sp.set("sort", next.sort);
@@ -76,21 +74,12 @@ function useListingFilters(): [
   return [filters, set];
 }
 
-function getColorHex(name: string) {
-  for (const product of products) {
-    const match = product.colors.find((color) => color.name === name);
-    if (match) return match.hex;
-  }
-  return "#cccccc";
-}
-
 function countActiveFilters(filters: ProductFilters) {
   let count = 0;
   if (filters.category && filters.category !== "all") count += 1;
   if ((filters.minPrice ?? 0) > 0 || (filters.maxPrice ?? DEFAULT_MAX_PRICE) < DEFAULT_MAX_PRICE) {
     count += 1;
   }
-  if (filters.colors?.length) count += filters.colors.length;
   if (filters.minRating) count += 1;
   if (filters.availability && filters.availability !== "all") count += 1;
   return count;
@@ -101,7 +90,6 @@ function clearAllFilters(set: (patch: Partial<ProductFilters>) => void) {
     category: "all",
     minPrice: 0,
     maxPrice: DEFAULT_MAX_PRICE,
-    colors: [],
     minRating: undefined,
     availability: "all",
   });
@@ -169,17 +157,6 @@ function ActiveFilterChips({
     });
   }
 
-  filters.colors?.forEach((color) => {
-    chips.push({
-      key: `color-${color}`,
-      label: color,
-      clear: () =>
-        set({
-          colors: filters.colors?.filter((entry) => entry !== color) ?? [],
-        }),
-    });
-  });
-
   if (filters.minRating) {
     chips.push({
       key: "rating",
@@ -231,12 +208,6 @@ function FilterPanel({
   set: (patch: Partial<ProductFilters>) => void;
   className?: string;
 }) {
-  const colorOptions = useMemo(() => {
-    const names = new Set<string>();
-    products.forEach((p) => p.colors.forEach((c) => names.add(c.name)));
-    return [...names].sort();
-  }, []);
-
   const activeCount = countActiveFilters(filters);
   const categoryHint =
     filters.category && filters.category !== "all"
@@ -300,41 +271,6 @@ function FilterPanel({
         <p className="mt-3 text-xs text-muted-foreground tabular-nums">
           ${filters.minPrice ?? 0} – ${filters.maxPrice ?? DEFAULT_MAX_PRICE}
         </p>
-      </FilterSection>
-
-      <FilterSection
-        title="Color"
-        hint={filters.colors?.length ? `${filters.colors.length} selected` : undefined}
-      >
-        <div className="flex flex-wrap gap-2">
-          {colorOptions.map((name) => {
-            const checked = filters.colors?.includes(name) ?? false;
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => {
-                  const next = new Set(filters.colors ?? []);
-                  if (checked) next.delete(name);
-                  else next.add(name);
-                  set({ colors: [...next] });
-                }}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                  checked
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:bg-muted"
-                )}
-              >
-                <span
-                  className="size-3 rounded-full ring-1 ring-black/10"
-                  style={{ backgroundColor: getColorHex(name) }}
-                />
-                {name}
-              </button>
-            );
-          })}
-        </div>
       </FilterSection>
 
       <FilterSection title="Rating" hint={filters.minRating ? `${filters.minRating}+` : undefined}>
@@ -472,7 +408,7 @@ export function ProductListing({
           {list.length === 0 ? (
             <EmptySearch query={merged.q} />
           ) : (
-            <div className="grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

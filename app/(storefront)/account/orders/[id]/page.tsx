@@ -56,14 +56,14 @@ export default function OrderDetailPage({
       <h2 className="mt-12 text-lg font-medium">Items</h2>
       <ul className="mt-4 divide-y divide-border border-y border-border">
         {order.items.map((item) => (
-          <li key={item.slug + item.color} className="flex gap-4 py-4">
+          <li key={item.slug + item.variant} className="flex gap-4 py-4">
             <Link href={`/products/${item.slug}`} className="relative size-20 overflow-hidden bg-muted">
               <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
             </Link>
             <div className="flex-1">
               <p className="text-sm font-medium">{item.name}</p>
               <p className="text-xs text-muted-foreground">
-                {item.color} · {item.variant} · Qty {item.quantity}
+                {item.variant} · Qty {item.quantity}
               </p>
             </div>
             <p className="text-sm tabular-nums">{formatPrice(item.price * item.quantity)}</p>

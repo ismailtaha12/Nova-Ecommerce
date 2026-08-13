@@ -23,7 +23,7 @@ export function CartLine({ item }: { item: CartItem }) {
               {item.name}
             </Link>
             <p className="mt-1 text-xs text-muted-foreground">
-              {item.color} · {item.variant}
+              {item.variant}
             </p>
           </div>
           <p className="text-sm tabular-nums">{formatPrice(item.price * item.quantity)}</p>

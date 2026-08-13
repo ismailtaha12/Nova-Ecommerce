@@ -15,11 +15,6 @@ export const products: Product[] = [
     rating: 4.8,
     reviewCount: 1284,
     category: "audio",
-    colors: [
-      { name: "Graphite", hex: "#2b2b2b" },
-      { name: "Sand", hex: "#cbbba0" },
-      { name: "Ink Blue", hex: "#1e2a3a" },
-    ],
     variants: [
       { id: "standard", name: "Standard" },
       { id: "travel", name: "Travel case" },
@@ -54,10 +49,6 @@ export const products: Product[] = [
     rating: 4.7,
     reviewCount: 412,
     category: "audio",
-    colors: [
-      { name: "Walnut", hex: "#5c4634" },
-      { name: "Slate", hex: "#4a4e55" },
-    ],
     variants: [
       { id: "standard", name: "Standard" },
       { id: "balanced", name: "Balanced cable" },
@@ -92,11 +83,6 @@ export const products: Product[] = [
     rating: 4.6,
     reviewCount: 2103,
     category: "audio",
-    colors: [
-      { name: "Cloud", hex: "#e8e4dc" },
-      { name: "Charcoal", hex: "#2f2f2f" },
-      { name: "Clay", hex: "#b07a5a" },
-    ],
     variants: [
       { id: "standard", name: "Standard" },
       { id: "mag", name: "Mag case" },
@@ -132,10 +118,6 @@ export const products: Product[] = [
     rating: 4.5,
     reviewCount: 667,
     category: "audio",
-    colors: [
-      { name: "Midnight", hex: "#16181d" },
-      { name: "Fog", hex: "#c5c8cc" },
-    ],
     variants: [
       { id: "standard", name: "Standard" },
       { id: "foam", name: "Memory foam tips" },
@@ -170,11 +152,6 @@ export const products: Product[] = [
     rating: 4.9,
     reviewCount: 891,
     category: "audio",
-    colors: [
-      { name: "Oat", hex: "#d8cbb8" },
-      { name: "Forest", hex: "#3a4a3c" },
-      { name: "Charcoal", hex: "#2c2c2c" },
-    ],
     variants: [
       { id: "standard", name: "Standard" },
       { id: "stand", name: "With stand" },
@@ -209,11 +186,6 @@ export const products: Product[] = [
     rating: 4.4,
     reviewCount: 1540,
     category: "audio",
-    colors: [
-      { name: "Oat", hex: "#d8cbb8" },
-      { name: "Terracotta", hex: "#c45c26" },
-      { name: "Slate", hex: "#5a5e64" },
-    ],
     variants: [{ id: "standard", name: "Standard" }],
     images: [
       "/products/halo.png",
@@ -242,11 +214,6 @@ export const products: Product[] = [
     rating: 4.6,
     reviewCount: 733,
     category: "wearables",
-    colors: [
-      { name: "Steel", hex: "#b8b8b8" },
-      { name: "Black DLC", hex: "#1a1a1a" },
-      { name: "Gold", hex: "#c4a574" },
-    ],
     variants: [
       { id: "40", name: "40 mm" },
       { id: "44", name: "44 mm" },
@@ -281,11 +248,6 @@ export const products: Product[] = [
     rating: 4.5,
     reviewCount: 501,
     category: "wearables",
-    colors: [
-      { name: "Trail", hex: "#4a5c3a" },
-      { name: "Ocean", hex: "#2c4a5c" },
-      { name: "Flame", hex: "#c45c26" },
-    ],
     variants: [
       { id: "s", name: "S band" },
       { id: "m", name: "M/L band" },
@@ -318,10 +280,6 @@ export const products: Product[] = [
     rating: 4.7,
     reviewCount: 328,
     category: "lighting",
-    colors: [
-      { name: "Aluminum", hex: "#c8c8c8" },
-      { name: "Black", hex: "#1c1c1c" },
-    ],
     variants: [{ id: "standard", name: "Standard" }],
     images: [
       u("photo-1507473886605-74d4bb4d3ace"),
@@ -352,10 +310,6 @@ export const products: Product[] = [
     rating: 4.3,
     reviewCount: 156,
     category: "lighting",
-    colors: [
-      { name: "Black", hex: "#1c1c1c" },
-      { name: "Ivory", hex: "#ebe6dc" },
-    ],
     variants: [{ id: "standard", name: "Standard" }],
     images: [
       u("photo-1543198126-a8ad8e47fb22"),
@@ -385,10 +339,6 @@ export const products: Product[] = [
     rating: 4.4,
     reviewCount: 980,
     category: "power",
-    colors: [
-      { name: "Aluminum", hex: "#c8c8c8" },
-      { name: "Graphite", hex: "#3a3a3a" },
-    ],
     variants: [{ id: "us", name: "US plug" }, { id: "eu", name: "EU plug" }],
     images: [
       u("photo-1583863788434-e58a36330cf0"),
@@ -419,10 +369,6 @@ export const products: Product[] = [
     rating: 4.6,
     reviewCount: 445,
     category: "power",
-    colors: [
-      { name: "Stone", hex: "#8a8680" },
-      { name: "Black", hex: "#1c1c1c" },
-    ],
     variants: [{ id: "standard", name: "Standard" }],
     images: [
       u("photo-1609091834311-8e26282902c6"),
