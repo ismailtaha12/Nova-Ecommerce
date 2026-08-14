@@ -1,7 +1,9 @@
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { ProductForm } from "@/components/admin/product-form";
+import { listAdminCategories } from "@/lib/data-access/admin";
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const categories = await listAdminCategories();
   return (
     <div>
       <AdminPageHeader
@@ -11,7 +13,7 @@ export default function NewProductPage() {
           { label: "New" },
         ]}
       />
-      <ProductForm />
+      <ProductForm categories={categories.filter((category) => !category.archived)} />
     </div>
   );
 }

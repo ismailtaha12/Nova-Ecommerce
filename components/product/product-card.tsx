@@ -183,7 +183,8 @@ export function ProductCard({
             onClick={() =>
               addItem({
                 product,
-                variant: product.variants[0].name,
+                variant: product.variants[0]?.name ?? "Standard",
+                variantId: product.variants[0]?.id,
               })
             }
           >

@@ -1,9 +1,18 @@
 import type { ProductFilters } from "@/lib/filter-products";
 import { createClient } from "@/lib/supabase/server";
-import type { Product, Review } from "@/lib/types";
-import { mapProduct, mapReview, type ProductRow } from "@/lib/data-access/mappers";
+import type { Category, Coupon, HomepageBanner, Product, Review } from "@/lib/types";
+import { categorySlugsForFilter } from "@/lib/catalog";
+import {
+  mapBanner,
+  mapCategory,
+  mapCoupon,
+  mapProduct,
+  mapReview,
+  type ProductRow,
+} from "@/lib/data-access/mappers";
 
-const PRODUCT_SELECT = "*, product_variants(id, name, sku_key)" as const;
+const PRODUCT_SELECT =
+  "*, product_variants(id, product_id, sku_key, name, price, stock, options, sort_order)" as const;
 
 export type ProductSummary = Pick<
   Product,
@@ -18,8 +27,21 @@ function sanitizeIlike(value: string) {
   return value.replace(/[%_,()]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+export async function listCategories(): Promise<Category[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  throwIfError(error);
+  return (data ?? []).map(mapCategory);
+}
+
 export async function listProducts(filters: ProductFilters = {}): Promise<Product[]> {
   const supabase = await createClient();
+  const categories = await listCategories();
   let query = supabase
     .from("products")
     .select(PRODUCT_SELECT)
@@ -31,7 +53,12 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
   }
 
   if (filters.category && filters.category !== "all") {
-    query = query.eq("category", filters.category);
+    const slugs = categorySlugsForFilter(filters.category, categories);
+    if (slugs.length === 1) {
+      query = query.eq("category", slugs[0]);
+    } else if (slugs.length > 1) {
+      query = query.in("category", slugs);
+    }
   }
 
   if (filters.minPrice != null && Number.isFinite(filters.minPrice)) {
@@ -170,4 +197,29 @@ export async function listWishlistProducts(ids: string[]): Promise<Product[]> {
     const product = byId.get(id);
     return product ? [product] : [];
   });
+}
+
+export async function listActiveBanners(): Promise<HomepageBanner[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("homepage_banners")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+  throwIfError(error);
+  return (data ?? []).map(mapBanner);
+}
+
+export async function getCouponByCode(code: string): Promise<Coupon | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("coupons")
+    .select("*")
+    .ilike("code", trimmed)
+    .eq("active", true)
+    .maybeSingle();
+  throwIfError(error);
+  return data ? mapCoupon(data) : null;
 }

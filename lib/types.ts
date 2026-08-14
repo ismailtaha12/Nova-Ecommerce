@@ -1,13 +1,25 @@
 export type ProductVariant = {
   id: string;
   name: string;
+  skuKey: string;
+  price?: number;
+  stock: number;
+  options: Record<string, string>;
+  sortOrder: number;
 };
 
-export type ProductCategory =
-  | "audio"
-  | "wearables"
-  | "lighting"
-  | "power";
+export type ProductCategory = string;
+
+export type Category = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  image: string;
+  parentId?: string;
+  sortOrder: number;
+  archived?: boolean;
+};
 
 export type Product = {
   id: string;
@@ -20,6 +32,7 @@ export type Product = {
   rating: number;
   reviewCount: number;
   category: ProductCategory;
+  categoryId: string;
   variants: ProductVariant[];
   images: string[];
   stock: number;
@@ -31,6 +44,35 @@ export type Product = {
   specs: Record<string, string>;
   shipping: string;
   returns: string;
+};
+
+export type HomepageBanner = {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  ctaLabel: string;
+  ctaHref: string;
+  sortOrder: number;
+  active: boolean;
+  startsAt?: string;
+  endsAt?: string;
+};
+
+export type CouponType = "percent" | "fixed";
+
+export type Coupon = {
+  id: string;
+  code: string;
+  description: string;
+  type: CouponType;
+  amount: number;
+  minSubtotal: number;
+  maxUses: number | null;
+  uses: number;
+  startsAt?: string;
+  expiresAt?: string;
+  active: boolean;
 };
 
 export type Review = {
@@ -87,6 +129,7 @@ export type OrderLine = {
   name: string;
   image: string;
   variant: string;
+  variantId?: string;
   price: number;
   quantity: number;
 };
@@ -101,7 +144,7 @@ export type Order = {
   id: string;
   number: string;
   date: string;
-  userId: string;
+  userId: string | null;
   customerName?: string;
   customerEmail?: string;
   paymentStatus: PaymentStatus;
@@ -112,8 +155,17 @@ export type Order = {
   subtotal: number;
   shipping: number;
   tax: number;
+  discount: number;
+  couponCode?: string;
   total: number;
   timeline: OrderTimelineEvent[];
+  carrier?: string;
+  shippingService?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  labelUrl?: string;
+  stripePaymentIntentId?: string;
+  guestPhone?: string;
 };
 
 export type CartItem = {
@@ -123,6 +175,7 @@ export type CartItem = {
   name: string;
   image: string;
   variant: string;
+  variantId?: string;
   price: number;
   quantity: number;
   stock: number;
@@ -131,6 +184,7 @@ export type CartItem = {
 export type InventoryLog = {
   id: string;
   productId: string;
+  variantId?: string;
   sku: string;
   change: number;
   reason: string;
@@ -145,10 +199,12 @@ export type AdminCustomer = {
   orders: number;
   spent: number;
   joinedAt: string;
+  disabled?: boolean;
 };
 
 export type AdminCustomerDetail = AdminCustomer & {
   role: SessionUser["role"];
+  notes: string;
   addresses: Address[];
   orderHistory: Order[];
 };
@@ -157,6 +213,18 @@ export type StoreSettings = {
   storeName: string;
   origin: string;
   supportEmail: string;
+  taxRate: number;
+  freeShippingThreshold: number;
+  fallbackStandardShipping: number;
+  fallbackExpressShipping: number;
+  fallbackOvernightShipping: number;
+  originName: string;
+  originLine1: string;
+  originCity: string;
+  originState: string;
+  originZip: string;
+  originCountry: string;
+  demoMode: boolean;
   updatedAt: string;
 };
 
@@ -184,6 +252,16 @@ export type SortOption =
 
 export type DeliveryMethod = "standard" | "express" | "overnight";
 
+export type ShippingRateOption = {
+  id: string;
+  delivery: DeliveryMethod;
+  name: string;
+  detail: string;
+  amount: number;
+  carrier?: string;
+  service?: string;
+};
+
 export type CheckoutState = {
   email: string;
   firstName: string;
@@ -192,6 +270,12 @@ export type CheckoutState = {
   address: Omit<Address, "id" | "label" | "isDefault">;
   delivery: DeliveryMethod;
   paymentMethod: "card" | "apple-mock";
+  couponCode: string;
+  saveAddress: boolean;
+  shippingRateId?: string;
+  shippingAmount?: number;
+  carrier?: string;
+  shippingService?: string;
 };
 
 export const defaultCheckout: CheckoutState = {
@@ -209,4 +293,6 @@ export const defaultCheckout: CheckoutState = {
   },
   delivery: "standard",
   paymentMethod: "card",
+  couponCode: "",
+  saveAddress: false,
 };

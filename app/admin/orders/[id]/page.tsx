@@ -53,6 +53,8 @@ export default async function AdminOrderDetailPage({
           orderId={order.id}
           status={order.status}
           fulfillment={order.fulfillmentStatus}
+          paymentStatus={order.paymentStatus}
+          canBuyLabel={Boolean(order.paymentStatus === "paid" && !order.trackingNumber)}
         />
       </div>
 
@@ -133,6 +135,28 @@ export default async function AdminOrderDetailPage({
               <br />
               {address.country}
             </p>
+          </section>
+          <section>
+            <h2 className="text-sm font-medium">Shipment</h2>
+            {order.trackingUrl ? (
+              <p className="mt-2 text-sm">
+                <a href={order.trackingUrl} className="underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+                  {order.carrier ?? "Carrier"} {order.trackingNumber}
+                </a>
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">No tracking yet.</p>
+            )}
+            {order.labelUrl ? (
+              <a href={order.labelUrl} className="mt-2 inline-block text-sm underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+                Download label
+              </a>
+            ) : null}
+            {order.discount > 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Coupon {order.couponCode} · -{formatPrice(order.discount)}
+              </p>
+            ) : null}
           </section>
           <section>
             <h2 className="text-sm font-medium">Timeline</h2>

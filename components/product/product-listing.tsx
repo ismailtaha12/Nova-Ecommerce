@@ -23,7 +23,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { categories } from "@/lib/catalog";
+import { categories as fallbackCategories } from "@/lib/catalog";
+import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SORTS: { value: SortOption; label: string }[] = [
@@ -131,9 +132,11 @@ function FilterSection({
 function ActiveFilterChips({
   filters,
   set,
+  categories,
 }: {
   filters: ProductFilters;
   set: (patch: Partial<ProductFilters>) => void;
+  categories: Pick<Category, "slug" | "name">[];
 }) {
   const chips: { key: string; label: string; clear: () => void }[] = [];
 
@@ -201,10 +204,12 @@ function ActiveFilterChips({
 function FilterPanel({
   filters,
   set,
+  categories,
   className,
 }: {
   filters: ProductFilters;
   set: (patch: Partial<ProductFilters>) => void;
+  categories: Pick<Category, "slug" | "name">[];
   className?: string;
 }) {
   const activeCount = countActiveFilters(filters);
@@ -329,10 +334,12 @@ function FilterPanel({
 
 export function ProductListing({
   products,
+  categories = fallbackCategories,
   title = "Store",
   subtitle = "Every object Nova makes, in one place.",
 }: {
   products: Product[];
+  categories?: Pick<Category, "slug" | "name">[];
   title?: string;
   subtitle?: string;
 }) {
@@ -386,7 +393,7 @@ export function ProductListing({
                 <SheetTitle>Filters</SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-5 py-2">
-                <FilterPanel filters={merged} set={set} />
+                <FilterPanel filters={merged} set={set} categories={categories} />
               </div>
               <div className="border-t border-border p-5">
                 <Button type="button" className="w-full" onClick={() => setOpen(false)}>
@@ -401,11 +408,11 @@ export function ProductListing({
       <div className="grid items-start gap-12 lg:grid-cols-[260px_1fr]">
         <aside className="hidden lg:block">
           <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
-            <FilterPanel filters={merged} set={set} />
+            <FilterPanel filters={merged} set={set} categories={categories} />
           </div>
         </aside>
         <div>
-          <ActiveFilterChips filters={merged} set={set} />
+          <ActiveFilterChips filters={merged} set={set} categories={categories} />
           {list.length === 0 ? (
             <EmptySearch query={merged.q} />
           ) : (

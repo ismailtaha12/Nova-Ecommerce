@@ -94,6 +94,14 @@ export default async function OrderDetailPage({
             <br />
             {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zip}
           </address>
+          {order.trackingUrl ? (
+            <p className="mt-4 text-sm">
+              Tracking:{" "}
+              <a href={order.trackingUrl} className="underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
+                {order.trackingNumber ?? "Open carrier page"}
+              </a>
+            </p>
+          ) : null}
         </div>
         <div>
           <h2 className="text-lg font-medium">Totals</h2>

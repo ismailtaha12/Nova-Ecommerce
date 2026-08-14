@@ -3,15 +3,19 @@ import { Container, Section } from "@/components/layout/container";
 import { HeroSection } from "@/components/home/hero-section";
 import { CategoryBrowse } from "@/components/home/category-browse";
 import { ProductCard } from "@/components/product/product-card";
-import { getFeaturedProducts } from "@/lib/data-access/products";
+import { getFeaturedProducts, listActiveBanners, listCategories } from "@/lib/data-access/products";
 import { ArrowRight } from "lucide-react";
 
 export default async function HomePage() {
-  const featured = await getFeaturedProducts();
+  const [featured, banners, categories] = await Promise.all([
+    getFeaturedProducts(),
+    listActiveBanners(),
+    listCategories(),
+  ]);
 
   return (
     <>
-      <HeroSection product={featured[0] ?? null} />
+      <HeroSection product={featured[0] ?? null} banners={banners} />
 
       <Section>
         <Container>
@@ -40,7 +44,7 @@ export default async function HomePage() {
         </Container>
       </Section>
 
-      <CategoryBrowse />
+      <CategoryBrowse categories={categories} />
     </>
   );
 }

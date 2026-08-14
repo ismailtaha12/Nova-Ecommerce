@@ -3,7 +3,7 @@ import { Container } from "@/components/layout/container";
 import { ProductListing } from "@/components/product/product-listing";
 import { ProductGridSkeleton } from "@/components/states/skeletons";
 import { parseProductFilters } from "@/lib/filter-products";
-import { listProducts } from "@/lib/data-access/products";
+import { listCategories, listProducts } from "@/lib/data-access/products";
 
 export const metadata = {
   title: "Store",
@@ -26,12 +26,15 @@ export default async function ProductsPage({
 }) {
   const sp = await searchParams;
   const filters = parseProductFilters(searchParamsGet(sp));
-  const products = await listProducts(filters);
+  const [products, categories] = await Promise.all([
+    listProducts(filters),
+    listCategories(),
+  ]);
 
   return (
     <Container>
       <Suspense fallback={<ProductGridSkeleton />}>
-        <ProductListing products={products} />
+        <ProductListing products={products} categories={categories} />
       </Suspense>
     </Container>
   );

@@ -6,39 +6,35 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/data-access/auth";
 import type { FulfillmentStatus, OrderStatus, PaymentStatus } from "@/lib/types";
 
-const categories = ["audio", "wearables", "lighting", "power"] as const;
+const variantInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().trim().min(1),
+  skuKey: z.string().trim().min(1),
+  price: z.number().nonnegative().nullable().optional(),
+  stock: z.number().int().nonnegative(),
+  options: z.record(z.string(), z.string()).optional(),
+});
 
 const createProductSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   slug: z.string().trim().min(1, "Slug is required"),
   price: z.number().nonnegative(),
-  stock: z.number().int().nonnegative(),
+  stock: z.number().int().nonnegative().optional(),
   tagline: z.string().trim().default(""),
   description: z.string().trim().default(""),
-  category: z.enum(categories),
+  categoryId: z.string().uuid("Choose a category"),
+  images: z.array(z.string().trim().min(1)).optional(),
   imageUrl: z.string().trim().optional(),
   featured: z.boolean().optional(),
   bestSeller: z.boolean().optional(),
   newest: z.boolean().optional(),
   onSale: z.boolean().optional(),
   compareAtPrice: z.number().nonnegative().nullable().optional(),
+  variants: z.array(variantInputSchema).optional(),
 });
 
-const updateProductSchema = z.object({
+const updateProductSchema = createProductSchema.partial().extend({
   id: z.string().min(1),
-  name: z.string().trim().min(1).optional(),
-  slug: z.string().trim().min(1).optional(),
-  price: z.number().nonnegative().optional(),
-  stock: z.number().int().nonnegative().optional(),
-  tagline: z.string().trim().optional(),
-  description: z.string().trim().optional(),
-  category: z.enum(categories).optional(),
-  imageUrl: z.string().trim().optional(),
-  featured: z.boolean().optional(),
-  bestSeller: z.boolean().optional(),
-  newest: z.boolean().optional(),
-  onSale: z.boolean().optional(),
-  compareAtPrice: z.number().nonnegative().nullable().optional(),
 });
 
 const productIdSchema = z.object({
@@ -47,6 +43,7 @@ const productIdSchema = z.object({
 
 const adjustStockSchema = z.object({
   id: z.string().min(1),
+  variantId: z.string().min(1).optional(),
   delta: z.number().int(),
   reason: z.string().trim().min(1, "Reason is required"),
 });
@@ -83,7 +80,22 @@ export async function createProductAction(input: unknown) {
   const id = productIdFromSlug(parsed.data.slug);
   if (!id) return { error: "Slug must include letters or numbers." };
 
-  const images = parsed.data.imageUrl ? [parsed.data.imageUrl] : [];
+  const images = parsed.data.images?.length
+    ? parsed.data.images
+    : parsed.data.imageUrl
+      ? [parsed.data.imageUrl]
+      : [];
+  const variants = parsed.data.variants?.length
+    ? parsed.data.variants
+    : [
+        {
+          name: "Standard",
+          skuKey: "standard",
+          stock: parsed.data.stock ?? 0,
+          price: null as number | null,
+        },
+      ];
+
   const supabase = await createClient();
   const { error: productError } = await supabase.from("products").insert({
     id,
@@ -92,8 +104,8 @@ export async function createProductAction(input: unknown) {
     tagline: parsed.data.tagline,
     description: parsed.data.description,
     price: parsed.data.price,
-    stock: parsed.data.stock,
-    category: parsed.data.category,
+    stock: variants.reduce((sum, variant) => sum + variant.stock, 0),
+    category_id: parsed.data.categoryId,
     images,
     featured: parsed.data.featured ?? false,
     best_seller: parsed.data.bestSeller ?? false,
@@ -106,12 +118,18 @@ export async function createProductAction(input: unknown) {
 
   if (productError) return { error: productError.message };
 
-  const { error: variantError } = await supabase.from("product_variants").insert({
-    id: `${id}:standard`,
-    product_id: id,
-    sku_key: "standard",
-    name: "Standard",
-  });
+  const { error: variantError } = await supabase.from("product_variants").insert(
+    variants.map((variant, index) => ({
+      id: `${id}:${variant.skuKey}`,
+      product_id: id,
+      sku_key: variant.skuKey,
+      name: variant.name,
+      price: variant.price ?? null,
+      stock: variant.stock,
+      options: variant.options ?? {},
+      sort_order: index,
+    })),
+  );
 
   if (variantError) return { error: variantError.message };
 
@@ -133,7 +151,7 @@ export async function updateProductAction(input: unknown) {
     stock?: number;
     tagline?: string;
     description?: string;
-    category?: (typeof categories)[number];
+    category_id?: string;
     featured?: boolean;
     best_seller?: boolean;
     newest?: boolean;
@@ -147,7 +165,7 @@ export async function updateProductAction(input: unknown) {
   if (parsed.data.stock !== undefined) patch.stock = parsed.data.stock;
   if (parsed.data.tagline !== undefined) patch.tagline = parsed.data.tagline;
   if (parsed.data.description !== undefined) patch.description = parsed.data.description;
-  if (parsed.data.category !== undefined) patch.category = parsed.data.category;
+  if (parsed.data.categoryId !== undefined) patch.category_id = parsed.data.categoryId;
   if (parsed.data.featured !== undefined) patch.featured = parsed.data.featured;
   if (parsed.data.bestSeller !== undefined) patch.best_seller = parsed.data.bestSeller;
   if (parsed.data.newest !== undefined) patch.newest = parsed.data.newest;
@@ -155,6 +173,7 @@ export async function updateProductAction(input: unknown) {
   if (parsed.data.compareAtPrice !== undefined) {
     patch.compare_at_price = parsed.data.compareAtPrice;
   }
+  if (parsed.data.images !== undefined) patch.images = parsed.data.images;
 
   const supabase = await createClient();
 
@@ -170,16 +189,27 @@ export async function updateProductAction(input: unknown) {
     }
   }
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && !parsed.data.variants?.length) {
     return { ok: true as const };
   }
 
-  const { error } = await supabase
-    .from("products")
-    .update(patch)
-    .eq("id", parsed.data.id);
+  if (Object.keys(patch).length > 0) {
+    const { error } = await supabase
+      .from("products")
+      .update(patch)
+      .eq("id", parsed.data.id);
 
-  if (error) return { error: error.message };
+    if (error) return { error: error.message };
+  }
+
+  if (parsed.data.variants?.length) {
+    const { saveProductVariantsAction } = await import("@/lib/actions/catalog");
+    const variantResult = await saveProductVariantsAction(
+      parsed.data.id,
+      parsed.data.variants,
+    );
+    if (variantResult.error) return variantResult;
+  }
 
   revalidateCatalog();
   return { ok: true as const };
@@ -227,14 +257,47 @@ export async function restoreProductAction(input: unknown) {
   return { ok: true as const };
 }
 
-export async function adjustStockAction(id: unknown, delta: unknown, reason: unknown) {
+export async function adjustStockAction(
+  id: unknown,
+  delta: unknown,
+  reason: unknown,
+  variantId?: unknown,
+) {
   await requireAdmin();
-  const parsed = adjustStockSchema.safeParse({ id, delta, reason });
+  const parsed = adjustStockSchema.safeParse({ id, delta, reason, variantId });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid stock adjustment" };
   }
 
   const supabase = await createClient();
+  if (parsed.data.variantId) {
+    const { data: variant, error: lookupError } = await supabase
+      .from("product_variants")
+      .select("id, product_id, stock")
+      .eq("id", parsed.data.variantId)
+      .maybeSingle();
+    if (lookupError) return { error: lookupError.message };
+    if (!variant) return { error: "Variant not found." };
+    const nextStock = variant.stock + parsed.data.delta;
+    if (nextStock < 0) return { error: "Stock cannot go below zero." };
+    const { error: updateError } = await supabase
+      .from("product_variants")
+      .update({ stock: nextStock })
+      .eq("id", variant.id);
+    if (updateError) return { error: updateError.message };
+    const { error: logError } = await supabase.from("inventory_logs").insert({
+      product_id: variant.product_id,
+      variant_id: variant.id,
+      sku: variant.id,
+      change: parsed.data.delta,
+      reason: parsed.data.reason,
+    });
+    if (logError) return { error: logError.message };
+    revalidatePath("/admin", "layout");
+    revalidatePath("/products", "layout");
+    return { stock: nextStock };
+  }
+
   const { data: product, error: lookupError } = await supabase
     .from("products")
     .select("id, stock")
@@ -243,6 +306,18 @@ export async function adjustStockAction(id: unknown, delta: unknown, reason: unk
 
   if (lookupError) return { error: lookupError.message };
   if (!product) return { error: "Product not found." };
+
+  const { data: variant } = await supabase
+    .from("product_variants")
+    .select("id, stock")
+    .eq("product_id", product.id)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (variant) {
+    return adjustStockAction(product.id, parsed.data.delta, parsed.data.reason, variant.id);
+  }
 
   const nextStock = product.stock + parsed.data.delta;
   if (nextStock < 0) return { error: "Stock cannot go below zero." };
@@ -281,6 +356,18 @@ const storeSettingsSchema = z.object({
   storeName: z.string().trim().min(1, "Store name is required"),
   origin: z.string().trim().min(1, "Origin is required"),
   supportEmail: z.string().trim().email("Enter a valid support email"),
+  taxRate: z.number().min(0).max(1),
+  freeShippingThreshold: z.number().nonnegative(),
+  fallbackStandardShipping: z.number().nonnegative(),
+  fallbackExpressShipping: z.number().nonnegative(),
+  fallbackOvernightShipping: z.number().nonnegative(),
+  originName: z.string().trim().min(1),
+  originLine1: z.string().trim().min(1),
+  originCity: z.string().trim().min(1),
+  originState: z.string().trim().min(1),
+  originZip: z.string().trim().min(1),
+  originCountry: z.string().trim().min(2),
+  demoMode: z.boolean(),
 });
 
 type OrderPatch = {
@@ -362,7 +449,7 @@ export async function cancelOrderAction(input: unknown) {
   const supabase = await createClient();
   const { data: order, error: lookupError } = await supabase
     .from("orders")
-    .select("id, number, status, order_items(product_id, quantity)")
+    .select("id, number, status, payment_status")
     .eq("id", parsed.data.orderId)
     .maybeSingle();
 
@@ -372,7 +459,7 @@ export async function cancelOrderAction(input: unknown) {
 
   const { data: cancelled, error: cancelError } = await supabase
     .from("orders")
-    .update({ status: "cancelled" })
+    .update({ status: "cancelled", payment_status: order.payment_status === "paid" ? "refunded" : "failed" })
     .eq("id", order.id)
     .neq("status", "cancelled")
     .select("id")
@@ -381,30 +468,10 @@ export async function cancelOrderAction(input: unknown) {
   if (cancelError) return { error: cancelError.message };
   if (!cancelled) return { error: "Order is already cancelled." };
 
-  const items = order.order_items ?? [];
-  for (const item of items) {
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .select("id, stock")
-      .eq("id", item.product_id)
-      .maybeSingle();
-    if (productError) return { error: productError.message };
-    if (!product) continue;
-
-    const { error: stockError } = await supabase
-      .from("products")
-      .update({ stock: product.stock + item.quantity })
-      .eq("id", product.id);
-    if (stockError) return { error: stockError.message };
-
-    const { error: logError } = await supabase.from("inventory_logs").insert({
-      product_id: product.id,
-      sku: skuFor(product.id),
-      change: item.quantity,
-      reason: `Order cancelled ${order.number}`,
-    });
-    if (logError) return { error: logError.message };
-  }
+  const { error: restockError } = await supabase.rpc("restock_order", {
+    p_order_id: order.id,
+  });
+  if (restockError) return { error: restockError.message };
 
   revalidatePath("/admin", "layout");
   revalidatePath("/account", "layout");
@@ -425,6 +492,18 @@ export async function updateStoreSettingsAction(input: unknown) {
     store_name: parsed.data.storeName,
     origin: parsed.data.origin,
     support_email: parsed.data.supportEmail,
+    tax_rate: parsed.data.taxRate,
+    free_shipping_threshold: parsed.data.freeShippingThreshold,
+    fallback_standard_shipping: parsed.data.fallbackStandardShipping,
+    fallback_express_shipping: parsed.data.fallbackExpressShipping,
+    fallback_overnight_shipping: parsed.data.fallbackOvernightShipping,
+    origin_name: parsed.data.originName,
+    origin_line1: parsed.data.originLine1,
+    origin_city: parsed.data.originCity,
+    origin_state: parsed.data.originState,
+    origin_zip: parsed.data.originZip,
+    origin_country: parsed.data.originCountry,
+    demo_mode: parsed.data.demoMode,
     updated_at: new Date().toISOString(),
   });
 
@@ -536,3 +615,93 @@ export async function uploadProductImageAction(formData: FormData) {
 
   return { url: publicUrl };
 }
+
+export async function refundOrderAction(orderId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("id, stripe_payment_intent_id, payment_status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!order) return { error: "Order not found." };
+  if (order.payment_status === "refunded") return { error: "Already refunded." };
+
+  if (order.stripe_payment_intent_id) {
+    const { refundPayment } = await import("@/lib/payments/stripe");
+    try {
+      await refundPayment(order.stripe_payment_intent_id);
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Refund failed." };
+    }
+  }
+
+  await supabase
+    .from("orders")
+    .update({ payment_status: "refunded", status: "cancelled" })
+    .eq("id", order.id);
+  await supabase.rpc("restock_order", { p_order_id: order.id });
+  revalidatePath("/admin", "layout");
+  revalidatePath("/account", "layout");
+  return { ok: true as const };
+}
+
+export async function buyShippingLabelAction(orderId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("id, shipping_rate_id, payment_status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!order) return { error: "Order not found." };
+  if (order.payment_status !== "paid") return { error: "Order is not paid." };
+  if (!order.shipping_rate_id) return { error: "No Shippo rate on this order. Mark shipped manually or re-quote." };
+
+  try {
+    const { purchaseShippingLabel } = await import("@/lib/shipping/shippo");
+    const label = await purchaseShippingLabel(order.shipping_rate_id);
+    await supabase
+      .from("orders")
+      .update({
+        tracking_number: label.trackingNumber,
+        tracking_url: label.trackingUrl,
+        label_url: label.labelUrl,
+        shippo_transaction_id: label.transactionId,
+        carrier: label.carrier,
+        shipping_service: label.service,
+        fulfillment_status: "shipped",
+        status: "shipped",
+      })
+      .eq("id", order.id);
+    await supabase
+      .from("order_events")
+      .update({ complete: true, occurred_at: new Date().toISOString() })
+      .eq("order_id", order.id)
+      .in("label", ["Fulfilled", "Shipped"]);
+    revalidatePath("/admin", "layout");
+    revalidatePath("/account", "layout");
+    return { ok: true as const, trackingNumber: label.trackingNumber, labelUrl: label.labelUrl };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not buy a shipping label." };
+  }
+}
+
+export async function exportOrdersCsvAction() {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("number, placed_at, payment_status, status, total, guest_email, coupon_code")
+    .eq("payment_status", "paid")
+    .order("placed_at", { ascending: false });
+  if (error) return { error: error.message };
+  const header = "number,date,payment,status,total,email,coupon";
+  const rows = (data ?? []).map((row) =>
+    [row.number, row.placed_at, row.payment_status, row.status, row.total, row.guest_email ?? "", row.coupon_code ?? ""].join(","),
+  );
+  return { csv: [header, ...rows].join("\n") };
+}
+

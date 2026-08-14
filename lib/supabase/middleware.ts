@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isProtectedPath } from "@/lib/auth/safe-next-path";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -29,8 +30,7 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
   const path = request.nextUrl.pathname;
-  const isProtected =
-    path.startsWith("/account") || path.startsWith("/admin") || path.startsWith("/checkout");
+  const isProtected = isProtectedPath(path);
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

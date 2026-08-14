@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CustomerManageForm } from "@/components/admin/customer-manage-form";
 import { getAdminCustomerById } from "@/lib/data-access/admin";
 import { formatDate, formatPrice } from "@/lib/format";
 
@@ -40,7 +41,9 @@ export default async function AdminCustomerDetailPage({
       <p className="mt-4 text-sm text-muted-foreground">
         Joined {formatDate(customer.joinedAt)}
         {customer.phone ? ` · ${customer.phone}` : ""}
+        {customer.disabled ? " · Suspended" : ""}
       </p>
+      <CustomerManageForm customerId={customer.id} notes={customer.notes} disabled={Boolean(customer.disabled)} />
 
       <section className="mt-10">
         <h2 className="text-lg font-medium">Addresses</h2>

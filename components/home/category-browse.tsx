@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Container, Section } from "@/components/layout/container";
-import { browseCategories } from "@/lib/catalog";
+import { browseFromCategories } from "@/lib/catalog";
+import type { Category } from "@/lib/types";
 
-export function CategoryBrowse() {
+export function CategoryBrowse({ categories }: { categories: Category[] }) {
+  const items = browseFromCategories(categories);
   return (
     <Section className="border-t border-border">
       <Container>
@@ -15,7 +17,7 @@ export function CategoryBrowse() {
 
         <div className="mt-10 overflow-hidden rounded-[2rem] border border-border bg-card lg:mt-12 lg:rounded-[2.5rem]">
           <div className="grid divide-y divide-border lg:grid-cols-5 lg:divide-x lg:divide-y-0">
-            {browseCategories.map((cat) => (
+            {items.map((cat) => (
               <Link
                 key={cat.slug}
                 href={cat.href}

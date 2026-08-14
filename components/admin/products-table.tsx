@@ -7,7 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { archiveProductAction, restoreProductAction } from "@/lib/actions/admin";
 import { ConfirmAction } from "@/components/admin/confirm-action";
-import { categories, categoryName } from "@/lib/catalog";
+import { categoryName } from "@/lib/catalog";
 import { formatPrice, skuFor, stockLabel } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +77,14 @@ export function ProductsTable({ products }: { products: Product[] }) {
     return list;
   }, [products, q, cat, sort, stock, archived]);
 
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const product of products) {
+      if (product.category) seen.set(product.category, categoryName(product.category));
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [products]);
+
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages - 1);
   const slice = filtered.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
@@ -105,9 +113,9 @@ export function ProductsTable({ products }: { products: Product[] }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.slug} value={category.slug}>
-                {category.name}
+            {categoryOptions.map(([slug, name]) => (
+              <SelectItem key={slug} value={slug}>
+                {name}
               </SelectItem>
             ))}
           </SelectContent>

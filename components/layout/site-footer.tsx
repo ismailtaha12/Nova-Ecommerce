@@ -15,7 +15,7 @@ const columns = [
   {
     title: "Support",
     links: [
-      { href: "/account/orders", label: "Order status" },
+      { href: "/orders/track", label: "Order status" },
       { href: "/account", label: "Account" },
       { href: "/products", label: "Shipping" },
       { href: "/products", label: "Returns" },

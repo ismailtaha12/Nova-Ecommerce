@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { CartItem, Product } from "@/lib/types";
+import { variantPrice } from "@/lib/commerce";
 import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 
 type CartContextValue = {
@@ -10,6 +11,7 @@ type CartContextValue = {
   addItem: (input: {
     product: Product;
     variant: string;
+    variantId?: string;
     quantity?: number;
   }) => void;
   updateQty: (key: string, quantity: number) => void;
@@ -43,24 +45,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
     ({
       product,
       variant,
+      variantId,
       quantity = 1,
     }: {
       product: Product;
       variant: string;
+      variantId?: string;
       quantity?: number;
     }) => {
-      if (product.stock <= 0) {
-        toast.error("This product is currently unavailable.");
+      const selected =
+        product.variants.find((item) => item.id === variantId) ??
+        product.variants.find((item) => item.name === variant) ??
+        product.variants[0];
+      const stock = selected?.stock ?? product.stock;
+      const price = variantPrice(product.price, selected?.price);
+      if (stock <= 0) {
+        toast.error("This option is currently unavailable.");
         return;
       }
-      const key = itemKey(product.id, variant);
+      const key = itemKey(product.id, selected?.id ?? variant);
       setItems((prev) => {
         const existing = prev.find((i) => i.key === key);
         if (existing) {
-          const nextQty = Math.min(existing.quantity + quantity, product.stock);
+          const nextQty = Math.min(existing.quantity + quantity, stock);
           toast.success("Quantity updated");
           return prev.map((i) =>
-            i.key === key ? { ...i, quantity: nextQty } : i
+            i.key === key ? { ...i, quantity: nextQty, stock, price } : i
           );
         }
         toast.success(`${product.name} added to bag`);
@@ -72,10 +82,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
             slug: product.slug,
             name: product.name,
             image: product.images[0],
-            variant,
-            price: product.price,
+            variant: selected?.name ?? variant,
+            variantId: selected?.id,
+            price,
             quantity,
-            stock: product.stock,
+            stock,
           },
         ];
       });

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AnalyticsRangeLinks } from "@/components/admin/analytics-range";
+import { ExportOrdersButton } from "@/components/admin/export-orders-button";
 import { OrdersChart, RevenueChart, TopProductsChart } from "@/components/admin/charts";
 import { KpiCard } from "@/components/admin/kpi-card";
 import {
@@ -34,7 +35,12 @@ export default async function AdminAnalyticsPage({
       <AdminPageHeader
         title="Analytics"
         description="Revenue, orders, and what is selling."
-        action={<AnalyticsRangeLinks range={range} />}
+        action={
+          <div className="flex items-center gap-3">
+            <ExportOrdersButton />
+            <AnalyticsRangeLinks range={range} />
+          </div>
+        }
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Revenue" value={formatPrice(analytics.revenue)} />

@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "@/components/admin/confirm-action";
 import { Button } from "@/components/ui/button";
-import { cancelOrderAction, updateFulfillmentAction } from "@/lib/actions/admin";
+import { cancelOrderAction, refundOrderAction, buyShippingLabelAction, updateFulfillmentAction } from "@/lib/actions/admin";
 import type { FulfillmentStatus, OrderStatus } from "@/lib/types";
 
 function nextStep(fulfillment: FulfillmentStatus, status: OrderStatus) {
@@ -25,10 +25,14 @@ export function OrderFulfillmentActions({
   orderId,
   status,
   fulfillment,
+  paymentStatus,
+  canBuyLabel,
 }: {
   orderId: string;
   status: OrderStatus;
   fulfillment: FulfillmentStatus;
+  paymentStatus?: string;
+  canBuyLabel?: boolean;
 }) {
   const step = nextStep(fulfillment, status);
   const [pending, startTransition] = useTransition();
@@ -57,6 +61,43 @@ export function OrderFulfillmentActions({
           {({ open, pending: confirming }) => (
             <Button type="button" disabled={confirming || pending} onClick={open}>
               {stepCopy[step].label}
+            </Button>
+          )}
+        </ConfirmAction>
+      ) : null}
+      {canBuyLabel ? (
+        <ConfirmAction
+          title="Buy shipping label?"
+          description="This purchases a Shippo label and stores tracking on the order."
+          confirmLabel="Buy label"
+          onConfirm={async () => {
+            const result = await buyShippingLabelAction(orderId);
+            if (result.error) return result;
+            toast.success(result.trackingNumber ? `Tracking ${result.trackingNumber}` : "Label purchased");
+          }}
+        >
+          {({ open, pending: confirming }) => (
+            <Button type="button" variant="outline" disabled={confirming || pending} onClick={open}>
+              Buy shipping label
+            </Button>
+          )}
+        </ConfirmAction>
+      ) : null}
+      {paymentStatus === "paid" ? (
+        <ConfirmAction
+          title="Refund this order?"
+          description="Stripe will be refunded when configured, stock is restored, and the order is cancelled."
+          confirmLabel="Refund"
+          destructive
+          onConfirm={async () => {
+            const result = await refundOrderAction(orderId);
+            if (result.error) return result;
+            toast.success("Refunded");
+          }}
+        >
+          {({ open, pending: confirming }) => (
+            <Button type="button" variant="outline" disabled={confirming || pending} onClick={open}>
+              Refund
             </Button>
           )}
         </ConfirmAction>

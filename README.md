@@ -2,11 +2,11 @@
 
 **Nova** is a premium consumer-electronics storefront: product discovery, cart, checkout, customer accounts, and an admin dashboard. Catalog, auth, orders, reviews, wishlist, and inventory are stored in **Supabase (Postgres)**. Next.js 16 is the application backend — Server Components read data, Server Actions mutate it, and Row Level Security protects the database.
 
-Payment is still simulated. Placing an order writes a real paid order and decrements real stock.
+Checkout creates a **pending** order, reserves variant stock, then Stripe (or demo mode) confirms payment. Shipping quotes and labels use Shippo when configured.
 
 Open the site at [http://localhost:3000](http://localhost:3000) after running the dev server.
 
-**Interview prep:** see [INTERVIEW_GUIDE.md](./INTERVIEW_GUIDE.md) for architecture, three core flows, demo script, and common Q&A.
+**Interview prep:** see [INTERVIEW_GUIDE.md](./INTERVIEW_GUIDE.md). **Working features (code map):** [FEATURES.md](./FEATURES.md). **Production handover:** see [DEPLOY.md](./DEPLOY.md).
 
 ---
 
@@ -27,26 +27,28 @@ The app is split into two main areas:
 
 ### Storefront
 
-- **Homepage** — Hero, featured products, and category browse
+- **Homepage** — Admin-managed banners, featured products, and category browse (including subcategories)
 - **Product catalog** — Server-side filters (category, price, rating, availability) synced to the URL
-- **Product detail** — Gallery, variants, specs, live reviews, and related products
+- **Product detail** — Gallery, variants with their own price/stock, specs, live reviews, and related products
 - **Search** — Command palette (`Ctrl/Cmd + K`) and dedicated search page
 - **Cart** — Guest cart in `localStorage`; prices and stock re-checked at checkout
-- **Checkout** — Sign-in required; mock payment; real order + stock decrement via `place_order()`
+- **Checkout** — Guest or signed-in; coupons; address validation; live or fallback shipping rates; Stripe Payment Element
+- **Orders** — Account history plus guest tracking at `/orders/track`
 - **Account** — Profile, orders, addresses, wishlist, and settings
 - **Auth** — Email/password sign up, sign in, password reset
 
 ### Admin
 
-Requires an `admin` profile. **The first account that signs up is automatically made admin.**
+Requires an `admin` profile. **In demo mode, the first account that signs up is automatically made admin.** Turn demo mode off in production (see [DEPLOY.md](./DEPLOY.md)).
 
-- **Dashboard** — Live KPIs and charts from real orders
-- **Products** — List, create, edit, archive
-- **Inventory** — Stock levels and adjustment log
-- **Orders** — Status updates with timeline events
-- **Customers** — Profiles with order counts and spend
-- **Categories, reviews** — Supporting catalog views
-- **Analytics** — Revenue, orders, and top products from the database
+- **Dashboard** — Live KPIs and charts from paid orders
+- **Products** — List, create, edit, archive, variant stock/price, image gallery
+- **Inventory** — Per-variant stock levels and adjustment log
+- **Orders** — Fulfillment, Shippo labels, refunds, tracking
+- **Customers** — Profiles, notes, suspend
+- **Categories / coupons / banners / reviews**
+- **Analytics** — Revenue, orders, top products, CSV export
+- **Settings** — Tax, shipping fallbacks, warehouse origin, demo mode
 
 ---
 
@@ -60,6 +62,9 @@ Requires an `admin` profile. **The first account that signs up is automatically 
 | Styling | Tailwind CSS v4 |
 | Components | shadcn/ui + Base UI |
 | Database / Auth / Storage | [Supabase](https://supabase.com) |
+| Payments | [Stripe](https://stripe.com) Payment Element + webhooks |
+| Shipping | [Shippo](https://goshippo.com) rates, labels, tracking |
+| Email / SMS | [Resend](https://resend.com) + [Twilio](https://www.twilio.com) |
 | Validation | Zod |
 | Icons | Lucide React |
 | Charts | Recharts |
@@ -88,12 +93,18 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 ### Environment
 
+See [`.env.example`](./.env.example) and [DEPLOY.md](./DEPLOY.md) for the full list.
+
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key — never put the service role key here |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only. Webhooks, guest order lookup, payment confirmation |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe Payment Element + webhooks |
+| `SHIPPO_API_KEY` | Live rates and labels (fallback rates work without it) |
+| `RESEND_API_KEY` / `TWILIO_*` | Transactional email and SMS |
 
-In the Supabase dashboard, add `http://localhost:3000/auth/callback` to **Redirect URLs**. New accounts are auto-confirmed so the first sign-up creates a session immediately.
+In the Supabase dashboard, add `http://localhost:3000/auth/callback` to **Redirect URLs**. In **demo mode**, new accounts are auto-confirmed so the first sign-up creates a session immediately. Turn demo mode off in production.
 
 ### Other scripts
 
@@ -101,13 +112,15 @@ In the Supabase dashboard, add `http://localhost:3000/auth/callback` to **Redire
 npm run build   # Production build
 npm run start   # Serve production build
 npm run lint    # Run ESLint
+npm test        # Unit + integration tests (checkout, Stripe, stock, auth)
+npm run test:watch
 ```
 
 ### First login
 
 1. Visit `/login` and create an account (password at least 8 characters).
-2. That first user is granted the `admin` role.
-3. Storefront account: `/account`. Admin: `/admin`.
+2. In demo mode, that first user is granted the `admin` role.
+3. Storefront account: `/account`. Admin: `/admin`. Guest order tracking: `/orders/track`.
 
 ---
 
@@ -117,12 +130,14 @@ npm run lint    # Run ESLint
 Browser  →  Next.js server (RSC + Server Actions + proxy.ts)
                  ↓
          Supabase (Postgres + RLS, Auth, Storage)
+         Stripe / Shippo / Resend / Twilio
+Stripe & Shippo webhooks → service-role client → confirm / restock / tracking
 ```
 
 - **Reads** — Server Components in `lib/data-access/`
 - **Writes** — Server Actions in `lib/actions/` (auth-checked, Zod-validated)
-- **Checkout** — `place_order()` Postgres function: validates stock, snapshots prices, writes the order, decrements inventory in one transaction
-- **Session** — Cookie-based via `@supabase/ssr`; `proxy.ts` refreshes tokens
+- **Checkout** — `place_order()` creates a **pending** order, reserves variant stock, then Stripe (or demo mode) confirms payment via webhook
+- **Session** — Cookie-based via `@supabase/ssr`; `proxy.ts` refreshes tokens. `/checkout` is public for guests
 - **Cart** — Client `localStorage` only; never trusted for price or stock
 
 ---
@@ -137,12 +152,16 @@ app/
 └── layout.tsx
 
 lib/
-├── supabase/              # Browser/server clients + Database types
+├── supabase/              # Browser/server/admin clients + Database types
 ├── data-access/           # Server queries
 ├── actions/               # Server Actions
-├── catalog.ts             # Static category navigation
+├── payments/              # Stripe PaymentIntent + webhook helpers
+├── shipping/              # Shippo rates, validation, labels
+├── notifications/         # Resend email + Twilio SMS
+├── catalog.ts             # Category helpers
 └── stores/                # Cart (localStorage) + session/wishlist UI
 
+app/api/webhooks/          # Stripe + Shippo webhook routes
 supabase/migrations/       # Schema, RLS, seed catalog
 ```
 
@@ -159,7 +178,9 @@ supabase/migrations/       # Schema, RLS, seed catalog
 | `/products/[slug]` | Product detail page |
 | `/search` | Search results |
 | `/cart` | Cart page |
-| `/checkout` | Checkout (signed in) |
+| `/checkout` | Guest or signed-in checkout |
+| `/checkout/success` | Payment result |
+| `/orders/track` | Guest order tracking |
 | `/account` | Customer account hub |
 | `/login` | Sign in / create account |
 
@@ -169,8 +190,12 @@ supabase/migrations/       # Schema, RLS, seed catalog
 |-------|-------------|
 | `/admin` | Dashboard |
 | `/admin/products` | Product management |
-| `/admin/orders` | Orders |
-| `/admin/inventory` | Stock |
+| `/admin/orders` | Orders, refunds, labels |
+| `/admin/inventory` | Variant stock |
+| `/admin/categories` | Categories and subcategories |
+| `/admin/coupons` | Coupon CRUD |
+| `/admin/banners` | Homepage banners |
+| `/admin/settings` | Tax, shipping, demo mode |
 
 ---
 

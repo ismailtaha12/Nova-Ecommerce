@@ -1,11 +1,13 @@
 import {
   BarChart3,
+  Image as ImageIcon,
   LayoutDashboard,
   Package,
   Settings,
   ShoppingBag,
   Star,
   Tag,
+  TicketPercent,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -23,6 +25,7 @@ export const adminNavGroups = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/coupons", label: "Coupons", icon: TicketPercent },
     ],
   },
   {
@@ -36,7 +39,10 @@ export const adminNavGroups = [
   },
   {
     label: "Store",
-    items: [{ href: "/admin/settings", label: "Settings", icon: Settings }],
+    items: [
+      { href: "/admin/banners", label: "Banners", icon: ImageIcon },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
+    ],
   },
 ] as const;
 

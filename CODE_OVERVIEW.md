@@ -1,6 +1,8 @@
 # Nova — Backend, Software Engineering, and Design
 
-Nova is a fullstack e-commerce storefront. The product surface is a Next.js 16 App Router app. The system of record is hosted Supabase (Postgres, Auth, Storage). Payment is simulated; catalog, identity, orders, stock, reviews, wishlist, and admin operations are real.
+> **Current feature catalog:** [FEATURES.md](./FEATURES.md). This document explains layering and integrity. Checkout is **pending → paid via Stripe webhook** (or demo mode), not simulated-as-paid in `place_order`. `/checkout` is public for guests.
+
+Nova is a fullstack e-commerce storefront. The product surface is a Next.js 16 App Router app. The system of record is hosted Supabase (Postgres, Auth, Storage). Payments use Stripe when configured; catalog, identity, orders, stock, reviews, wishlist, and admin operations are real.
 
 This document describes **how the backend is structured**, **why those choices were made**, and **where integrity is enforced**.
 
@@ -22,7 +24,7 @@ Those two requirements drive the design:
 | Guest browsing should stay fast | Catalog reads are public; cart is local until checkout |
 | Next.js is the application backend | Browser talks to Server Components / Server Actions, not to Postgres as a write API |
 
-Payment stays mocked on purpose: the interesting backend problem is **order integrity and inventory**, not a payment-provider integration.
+Payment uses Stripe Payment Element + webhooks when keys are present. Without Stripe, **demo mode** still places a pending order and confirms it so inventory/order integrity can be demoed locally.
 
 ---
 
@@ -64,10 +66,10 @@ flowchart TB
 
 **Request path**
 
-1. `proxy.ts` refreshes the Auth cookie on each matched request and redirects unauthenticated users away from `/account`, `/admin`, and `/checkout`.
+1. `proxy.ts` refreshes the Auth cookie on each matched request and redirects unauthenticated users away from `/account` and `/admin`. `/checkout` stays public for guests.
 2. Server Components load data through `lib/data-access/*` using a cookie-bound Supabase client.
 3. Mutations go through Server Actions in `lib/actions/*`. Each action authenticates, validates with Zod, then writes.
-4. Checkout calls `public.place_order()`, a `SECURITY INVOKER` wrapper around `private.place_order()` (`SECURITY DEFINER`). The function locks product rows, checks stock, snapshots prices, inserts the order, and decrements inventory in one transaction.
+4. Checkout calls `public.place_order()`, a `SECURITY INVOKER` wrapper around `private.place_order()` (`SECURITY DEFINER`). The function locks **variant** rows, checks stock, snapshots prices, inserts a **pending** order, and decrements variant inventory in one transaction. Stripe (or demo mode) later calls `confirm_order_paid`.
 
 The service role is never shipped to the client (`NEXT_PUBLIC_*` only carries the publishable key).
 
@@ -179,7 +181,7 @@ Identity is Supabase Auth (email/password). Application authorization is **not**
 
 | Gate | Where | What it stops |
 |------|--------|----------------|
-| Route proxy | `lib/supabase/middleware.ts` | Anonymous access to `/account`, `/admin`, `/checkout` |
+| Route proxy | `lib/supabase/middleware.ts` | Anonymous access to `/account`, `/admin` |
 | `requireUser()` / `requireAdmin()` | data-access + actions | Missing session, or non-admin hitting admin pages/actions |
 | RLS | Postgres | Direct table access that bypasses a forgotten action check |
 | Role trigger | `profiles` | Privilege escalation through a profile update |

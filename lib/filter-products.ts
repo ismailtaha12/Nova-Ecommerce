@@ -10,7 +10,6 @@ export type ProductFilters = {
   sort?: SortOption;
 };
 
-const CATEGORIES: ProductCategory[] = ["audio", "wearables", "lighting", "power"];
 const SORTS: SortOption[] = ["featured", "newest", "price-asc", "price-desc", "best-selling"];
 const AVAILABILITY: NonNullable<ProductFilters["availability"]>[] = [
   "all",
@@ -25,16 +24,14 @@ function parseNumber(value: string | null): number | undefined {
 }
 
 export function parseProductFilters(sp: { get(key: string): string | null }): ProductFilters {
-  const category = sp.get("category");
+  const category = sp.get("category")?.trim();
   const availability = sp.get("stock");
   const sort = sp.get("sort");
   const q = sp.get("q")?.trim();
 
   return {
     q: q || undefined,
-    category: CATEGORIES.includes(category as ProductCategory)
-      ? (category as ProductCategory)
-      : "all",
+    category: category && category !== "all" ? category : "all",
     minPrice: parseNumber(sp.get("min")),
     maxPrice: parseNumber(sp.get("max")),
     minRating: parseNumber(sp.get("rating")),

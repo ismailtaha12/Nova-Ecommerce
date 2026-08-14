@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/data-access/auth";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 function validationError(error: z.ZodError): { error: string } {
   return { error: error.issues[0]?.message ?? "Invalid input" };
@@ -18,20 +19,6 @@ function formRecord(formData: FormData) {
       typeof value === "string" ? value : "",
     ])
   );
-}
-
-function safeNextPath(value: unknown): string {
-  if (typeof value !== "string") return "/account";
-  const path = value.trim();
-  if (
-    !path.startsWith("/") ||
-    path.startsWith("//") ||
-    path.includes("\\") ||
-    path.includes("://")
-  ) {
-    return "/account";
-  }
-  return path;
 }
 
 async function requestOrigin() {

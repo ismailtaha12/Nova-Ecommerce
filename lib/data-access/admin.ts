@@ -2,10 +2,14 @@ import { requireAdmin } from "@/lib/data-access/auth";
 import { attachCustomers } from "@/lib/data-access/orders";
 import {
   mapAddress,
+  mapBanner,
+  mapCategory,
+  mapCoupon,
   mapInventoryLog,
   mapOrder,
   mapProduct,
   mapReview,
+  mapStoreSettings,
   type OrderRow,
   type ProductRow,
 } from "@/lib/data-access/mappers";
@@ -16,6 +20,9 @@ import type {
   AdminDashboard,
   AnalyticsPoint,
   AnalyticsRange,
+  Category,
+  Coupon,
+  HomepageBanner,
   InventoryLog,
   Order,
   Product,
@@ -24,7 +31,8 @@ import type {
   TopProductSales,
 } from "@/lib/types";
 
-const PRODUCT_SELECT = "*, product_variants(id, name, sku_key)" as const;
+const PRODUCT_SELECT =
+  "*, product_variants(id, product_id, sku_key, name, price, stock, options, sort_order)" as const;
 const ORDER_SELECT = "*, order_items(*), order_events(*)" as const;
 
 export type AdminReview = Review & {
@@ -134,6 +142,7 @@ export async function listAdminCustomers(query?: string): Promise<AdminCustomer[
 
   const totals = new Map<string, { orders: number; spent: number }>();
   for (const order of ordersRes.data ?? []) {
+    if (!order.user_id) continue;
     const current = totals.get(order.user_id) ?? { orders: 0, spent: 0 };
     current.orders += 1;
     current.spent += Number(order.total);
@@ -159,7 +168,7 @@ export async function getAdminCustomerById(id: string): Promise<AdminCustomerDet
   const supabase = await createClient();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, email, phone, role, created_at")
+    .select("id, first_name, last_name, email, phone, role, notes, disabled_at, created_at")
     .eq("id", id)
     .maybeSingle();
   throwIfError(error);
@@ -194,6 +203,8 @@ export async function getAdminCustomerById(id: string): Promise<AdminCustomerDet
     email: profile.email,
     phone: profile.phone,
     role: profile.role as AdminCustomerDetail["role"],
+    notes: profile.notes ?? "",
+    disabled: profile.disabled_at != null,
     orders: orderHistory.length,
     spent,
     joinedAt: profile.created_at,
@@ -206,7 +217,10 @@ export async function getAnalytics(range: AnalyticsRange = "all"): Promise<Analy
   await requireAdmin();
   const supabase = await createClient();
 
-  let ordersQuery = supabase.from("orders").select("id, placed_at, total, user_id");
+  let ordersQuery = supabase
+    .from("orders")
+    .select("id, placed_at, total, user_id, payment_status")
+    .eq("payment_status", "paid");
   if (range !== "all") {
     const start = new Date();
     start.setUTCDate(start.getUTCDate() - (range === "30d" ? 30 : 90));
@@ -337,13 +351,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 }
 
-const defaultSettings: StoreSettings = {
-  storeName: "Nova",
-  origin: "Oakland, CA",
-  supportEmail: "support@nova.example",
-  updatedAt: new Date(0).toISOString(),
-};
-
 export async function getStoreSettings(): Promise<StoreSettings> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -351,12 +358,40 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     .select("*")
     .eq("id", 1)
     .maybeSingle();
-  if (error) return defaultSettings;
-  if (!data) return defaultSettings;
-  return {
-    storeName: data.store_name,
-    origin: data.origin,
-    supportEmail: data.support_email,
-    updatedAt: data.updated_at,
-  };
+  if (error) return mapStoreSettings(null);
+  return mapStoreSettings(data);
+}
+
+export async function listAdminCategories(): Promise<Category[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  throwIfError(error);
+  return (data ?? []).map(mapCategory);
+}
+
+export async function listAdminBanners(): Promise<HomepageBanner[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("homepage_banners")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  throwIfError(error);
+  return (data ?? []).map(mapBanner);
+}
+
+export async function listAdminCoupons(): Promise<Coupon[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("coupons")
+    .select("*")
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return (data ?? []).map(mapCoupon);
 }

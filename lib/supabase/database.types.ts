@@ -6,12 +6,13 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-type ProductCategory = "audio" | "wearables" | "lighting" | "power";
 type OrderStatus = "processing" | "paid" | "fulfilled" | "shipped" | "delivered" | "cancelled";
 type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 type FulfillmentStatus = "unfulfilled" | "partial" | "fulfilled" | "shipped";
 type UserRole = "customer" | "admin";
 type DeliveryMethod = "standard" | "express" | "overnight";
+type CouponType = "percent" | "fixed";
+type NotificationChannel = "email" | "sms";
 
 type Fk<Name extends string, Column extends string, Relation extends string> = {
   foreignKeyName: Name;
@@ -56,10 +57,97 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["addresses"]["Insert"]>;
         Relationships: [];
       };
+      categories: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string;
+          image: string;
+          parent_id: string | null;
+          sort_order: number;
+          archived_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string;
+          image?: string;
+          parent_id?: string | null;
+          sort_order?: number;
+          archived_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["categories"]["Insert"]>;
+        Relationships: [Fk<"categories_parent_id_fkey", "parent_id", "categories">];
+      };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          description: string;
+          type: CouponType;
+          amount: number;
+          min_subtotal: number;
+          max_uses: number | null;
+          uses: number;
+          starts_at: string | null;
+          expires_at: string | null;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          description?: string;
+          type: CouponType;
+          amount: number;
+          min_subtotal?: number;
+          max_uses?: number | null;
+          uses?: number;
+          starts_at?: string | null;
+          expires_at?: string | null;
+          active?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["coupons"]["Insert"]>;
+        Relationships: [];
+      };
+      homepage_banners: {
+        Row: {
+          id: string;
+          title: string;
+          subtitle: string;
+          image: string;
+          cta_label: string;
+          cta_href: string;
+          sort_order: number;
+          active: boolean;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          subtitle?: string;
+          image?: string;
+          cta_label?: string;
+          cta_href?: string;
+          sort_order?: number;
+          active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["homepage_banners"]["Insert"]>;
+        Relationships: [];
+      };
       inventory_logs: {
         Row: {
           id: string;
           product_id: string;
+          variant_id: string | null;
           sku: string;
           change: number;
           reason: string;
@@ -68,13 +156,41 @@ export type Database = {
         Insert: {
           id?: string;
           product_id: string;
+          variant_id?: string | null;
           sku: string;
           change: number;
           reason: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["inventory_logs"]["Insert"]>;
-        Relationships: [Fk<"inventory_logs_product_id_fkey", "product_id", "products">];
+        Relationships: [
+          Fk<"inventory_logs_product_id_fkey", "product_id", "products">,
+          Fk<"inventory_logs_variant_id_fkey", "variant_id", "product_variants">,
+        ];
+      };
+      notification_logs: {
+        Row: {
+          id: string;
+          order_id: string | null;
+          channel: NotificationChannel;
+          event_type: string;
+          recipient: string;
+          status: string;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id?: string | null;
+          channel: NotificationChannel;
+          event_type: string;
+          recipient: string;
+          status?: string;
+          error?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notification_logs"]["Insert"]>;
+        Relationships: [Fk<"notification_logs_order_id_fkey", "order_id", "orders">];
       };
       order_events: {
         Row: {
@@ -105,6 +221,7 @@ export type Database = {
           name: string;
           image: string;
           variant: string;
+          variant_id: string | null;
           price: number;
           quantity: number;
         };
@@ -116,6 +233,7 @@ export type Database = {
           name: string;
           image: string;
           variant: string;
+          variant_id?: string | null;
           price: number;
           quantity: number;
         };
@@ -129,7 +247,7 @@ export type Database = {
         Row: {
           id: string;
           number: string;
-          user_id: string;
+          user_id: string | null;
           placed_at: string;
           payment_status: PaymentStatus;
           fulfillment_status: FulfillmentStatus;
@@ -140,11 +258,25 @@ export type Database = {
           tax: number;
           total: number;
           delivery: DeliveryMethod;
+          discount: number;
+          coupon_code: string | null;
+          guest_email: string | null;
+          guest_name: string | null;
+          guest_phone: string | null;
+          stripe_payment_intent_id: string | null;
+          carrier: string | null;
+          shipping_service: string | null;
+          tracking_number: string | null;
+          tracking_url: string | null;
+          label_url: string | null;
+          shippo_transaction_id: string | null;
+          shipping_rate_id: string | null;
+          stock_released_at: string | null;
         };
         Insert: {
           id?: string;
           number: string;
-          user_id: string;
+          user_id?: string | null;
           placed_at?: string;
           payment_status?: PaymentStatus;
           fulfillment_status?: FulfillmentStatus;
@@ -155,6 +287,20 @@ export type Database = {
           tax: number;
           total: number;
           delivery?: DeliveryMethod;
+          discount?: number;
+          coupon_code?: string | null;
+          guest_email?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
+          stripe_payment_intent_id?: string | null;
+          carrier?: string | null;
+          shipping_service?: string | null;
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          label_url?: string | null;
+          shippo_transaction_id?: string | null;
+          shipping_rate_id?: string | null;
+          stock_released_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
         Relationships: [Fk<"orders_user_id_fkey", "user_id", "profiles">];
@@ -165,12 +311,20 @@ export type Database = {
           product_id: string;
           sku_key: string;
           name: string;
+          price: number | null;
+          stock: number;
+          options: Json;
+          sort_order: number;
         };
         Insert: {
           id: string;
           product_id: string;
           sku_key: string;
           name: string;
+          price?: number | null;
+          stock?: number;
+          options?: Json;
+          sort_order?: number;
         };
         Update: Partial<Database["public"]["Tables"]["product_variants"]["Insert"]>;
         Relationships: [Fk<"product_variants_product_id_fkey", "product_id", "products">];
@@ -186,7 +340,8 @@ export type Database = {
           compare_at_price: number | null;
           rating: number;
           review_count: number;
-          category: ProductCategory;
+          category: string;
+          category_id: string;
           images: string[];
           stock: number;
           featured: boolean;
@@ -210,7 +365,8 @@ export type Database = {
           compare_at_price?: number | null;
           rating?: number;
           review_count?: number;
-          category: ProductCategory;
+          category?: string;
+          category_id: string;
           images?: string[];
           stock?: number;
           featured?: boolean;
@@ -225,7 +381,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
-        Relationships: [];
+        Relationships: [Fk<"products_category_id_fkey", "category_id", "categories">];
       };
       profiles: {
         Row: {
@@ -235,6 +391,8 @@ export type Database = {
           email: string;
           phone: string;
           role: UserRole;
+          notes: string;
+          disabled_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -244,6 +402,8 @@ export type Database = {
           email: string;
           phone?: string;
           role?: UserRole;
+          notes?: string;
+          disabled_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
@@ -275,6 +435,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
         Relationships: [Fk<"reviews_product_id_fkey", "product_id", "products">];
       };
+      stripe_events: {
+        Row: {
+          id: string;
+          type: string;
+          processed_at: string;
+        };
+        Insert: {
+          id: string;
+          type: string;
+          processed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["stripe_events"]["Insert"]>;
+        Relationships: [];
+      };
       wishlist_items: {
         Row: {
           user_id: string;
@@ -295,6 +469,18 @@ export type Database = {
           store_name: string;
           origin: string;
           support_email: string;
+          tax_rate: number;
+          free_shipping_threshold: number;
+          fallback_standard_shipping: number;
+          fallback_express_shipping: number;
+          fallback_overnight_shipping: number;
+          origin_name: string;
+          origin_line1: string;
+          origin_city: string;
+          origin_state: string;
+          origin_zip: string;
+          origin_country: string;
+          demo_mode: boolean;
           updated_at: string;
         };
         Insert: {
@@ -302,6 +488,18 @@ export type Database = {
           store_name?: string;
           origin?: string;
           support_email?: string;
+          tax_rate?: number;
+          free_shipping_threshold?: number;
+          fallback_standard_shipping?: number;
+          fallback_express_shipping?: number;
+          fallback_overnight_shipping?: number;
+          origin_name?: string;
+          origin_line1?: string;
+          origin_city?: string;
+          origin_state?: string;
+          origin_zip?: string;
+          origin_country?: string;
+          demo_mode?: boolean;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["store_settings"]["Insert"]>;
@@ -317,8 +515,20 @@ export type Database = {
           p_items: Json;
           p_shipping_address: Json;
           p_delivery: DeliveryMethod;
+          p_coupon_code?: string | null;
+          p_guest?: Json | null;
+          p_shipping_amount?: number | null;
+          p_shipping_meta?: Json | null;
         };
         Returns: string;
+      };
+      restock_order: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+      confirm_order_paid: {
+        Args: { p_order_id: string };
+        Returns: undefined;
       };
     };
     Enums: {
@@ -326,7 +536,6 @@ export type Database = {
       fulfillment_status: FulfillmentStatus;
       order_status: OrderStatus;
       payment_status: PaymentStatus;
-      product_category: ProductCategory;
       user_role: UserRole;
     };
     CompositeTypes: {

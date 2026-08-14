@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { ProductForm } from "@/components/admin/product-form";
-import { getAdminProductById } from "@/lib/data-access/admin";
+import { getAdminProductById, listAdminCategories } from "@/lib/data-access/admin";
 
 export default async function EditProductPage({
   params,
@@ -9,7 +9,10 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getAdminProductById(id);
+  const [product, categories] = await Promise.all([
+    getAdminProductById(id),
+    listAdminCategories(),
+  ]);
   if (!product) notFound();
 
   return (
@@ -22,7 +25,10 @@ export default async function EditProductPage({
           { label: product.name },
         ]}
       />
-      <ProductForm product={product} />
+      <ProductForm
+        product={product}
+        categories={categories.filter((category) => !category.archived)}
+      />
     </div>
   );
 }

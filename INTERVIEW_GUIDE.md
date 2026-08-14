@@ -1,12 +1,12 @@
 # Nova — Interview Guide
 
-Use this document to **understand**, **explain**, and **demo** Nova in technical interviews. For deep backend rationale, also read [CODE_OVERVIEW.md](./CODE_OVERVIEW.md). For setup and routes, see [README.md](./README.md).
+Use this document to **understand**, **explain**, and **demo** Nova in technical interviews. For the current working-feature map, read [FEATURES.md](./FEATURES.md). For deep backend rationale, also read [CODE_OVERVIEW.md](./CODE_OVERVIEW.md). For setup and routes, see [README.md](./README.md).
 
 ---
 
 ## 1. Elevator pitch (30 seconds)
 
-> **Nova** is a full-stack e-commerce app: Next.js 16 storefront + admin dashboard, Supabase (Postgres, Auth, Storage) as the system of record. The browser never owns prices, stock, or roles — checkout runs in a single Postgres transaction (`place_order`) that locks inventory, snapshots prices, and writes the order. Cart is localStorage for guest UX; payment is simulated, but orders and stock are real.
+> **Nova** is a full-stack e-commerce app: Next.js 16 storefront + admin dashboard, Supabase (Postgres, Auth, Storage) as the system of record. The browser never owns prices, stock, or roles — `place_order` reserves variant stock on a **pending** order; Stripe (or demo mode) confirms payment. Cart is localStorage for guest UX. Guest checkout and `/orders/track` are supported.
 
 **Stack:** Next.js App Router, React 19, TypeScript, Tailwind, Supabase, Zod, Server Actions.
 
@@ -21,7 +21,8 @@ Browser
   └─ Server Actions    → lib/actions       ← WRITE (Zod + auth + DB)
 
 proxy.ts (Next.js convention)
-  └─ refreshes auth cookies + redirects guests from /account, /checkout, /admin
+  └─ refreshes auth cookies + redirects guests from /account and /admin
+     (/checkout is public for guest checkout)
 
 Supabase
   ├─ Auth (sessions in cookies)

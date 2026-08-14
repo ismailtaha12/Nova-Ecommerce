@@ -40,24 +40,39 @@ export function InventoryPanel({
   const [reasonById, setReasonById] = useState<Record<string, string>>({});
 
   const filtered = useMemo(() => {
-    return products.filter((product) => {
-      if (q && !product.name.toLowerCase().includes(q.toLowerCase())) return false;
-      if (stock === "low") return product.stock <= 6;
-      if (stock === "out") return product.stock === 0;
+    const rows = products.flatMap((product) =>
+      (product.variants.length
+        ? product.variants
+        : [{ id: product.id, name: "Standard", stock: product.stock, skuKey: product.id, options: {}, sortOrder: 0 }]
+      ).map(
+        (variant) => ({
+          product,
+          variantId: variant.id,
+          name: `${product.name} · ${variant.name}`,
+          sku: variant.skuKey ? `NV-${variant.skuKey.toUpperCase()}` : skuFor(product.id),
+          stock: variant.stock,
+        }),
+      ),
+    );
+    return rows.filter((row) => {
+      if (q && !row.name.toLowerCase().includes(q.toLowerCase())) return false;
+      if (stock === "low") return row.stock <= 6;
+      if (stock === "out") return row.stock === 0;
       return true;
     });
   }, [products, q, stock]);
 
-  function apply(id: string) {
-    const qty = Number(qtyById[id] ?? "0");
+  function apply(productId: string, variantId: string) {
+    const key = variantId;
+    const qty = Number(qtyById[key] ?? "0");
     if (!Number.isInteger(qty) || qty === 0) {
       toast.error("Enter a non-zero whole number (negative to reduce).");
       return;
     }
-    const reason = (reasonById[id] ?? "").trim() || (qty > 0 ? "Restock" : "Manual adjustment");
-    setPendingKey(id);
+    const reason = (reasonById[key] ?? "").trim() || (qty > 0 ? "Restock" : "Manual adjustment");
+    setPendingKey(key);
     startTransition(async () => {
-      const result = await adjustStockAction(id, qty, reason);
+      const result = await adjustStockAction(productId, qty, reason, variantId);
       setPendingKey(null);
       if (result.error) {
         toast.error(result.error);
@@ -110,29 +125,29 @@ export function InventoryPanel({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{skuFor(product.id)}</TableCell>
-                  <TableCell className="tabular-nums">{product.stock}</TableCell>
+              filtered.map((row) => (
+                <TableRow key={row.variantId}>
+                  <TableCell className="font-medium">{row.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{row.sku}</TableCell>
+                  <TableCell className="tabular-nums">{row.stock}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
-                        product.stock === 0
+                        row.stock === 0
                           ? "destructive"
-                          : product.stock <= 6
+                          : row.stock <= 6
                             ? "outline"
                             : "secondary"
                       }
                       className={
-                        product.stock > 0 && product.stock <= 6
+                        row.stock > 0 && row.stock <= 6
                           ? "border-ember text-ember"
                           : undefined
                       }
                     >
-                      {product.stock === 0
+                      {row.stock === 0
                         ? "Out of stock"
-                        : product.stock <= 6
+                        : row.stock <= 6
                           ? "Low stock"
                           : "In stock"}
                     </Badge>
@@ -143,30 +158,30 @@ export function InventoryPanel({
                         type="number"
                         className="h-8 w-20"
                         placeholder="+/-"
-                        value={qtyById[product.id] ?? ""}
+                        value={qtyById[row.variantId] ?? ""}
                         onChange={(event) =>
                           setQtyById((current) => ({
                             ...current,
-                            [product.id]: event.target.value,
+                            [row.variantId]: event.target.value,
                           }))
                         }
                       />
                       <Input
                         className="h-8 w-36"
                         placeholder="Reason"
-                        value={reasonById[product.id] ?? ""}
+                        value={reasonById[row.variantId] ?? ""}
                         onChange={(event) =>
                           setReasonById((current) => ({
                             ...current,
-                            [product.id]: event.target.value,
+                            [row.variantId]: event.target.value,
                           }))
                         }
                       />
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={pending && pendingKey === product.id}
-                        onClick={() => apply(product.id)}
+                        disabled={pending && pendingKey === row.variantId}
+                        onClick={() => apply(row.product.id, row.variantId)}
                       >
                         Apply
                       </Button>

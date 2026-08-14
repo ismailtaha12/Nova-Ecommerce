@@ -1,7 +1,7 @@
-import type { ProductCategory } from "@/lib/types";
+import type { Category } from "@/lib/types";
 
 export const categories: {
-  slug: ProductCategory;
+  slug: string;
   name: string;
   description: string;
   image: string;
@@ -32,14 +32,34 @@ export const categories: {
   },
 ];
 
-export const browseCategories = [
-  { slug: "audio", name: "Audio", description: "Headphones, earbuds and sound", href: "/products?category=audio" },
-  { slug: "wearables", name: "Wearables", description: "Watches and daily companions", href: "/products?category=wearables" },
-  { slug: "phones", name: "Phones", description: "Flagship pocket computing", href: "/products?category=wearables" },
-  { slug: "tablets", name: "Tablets", description: "Canvas for work and ideas", href: "/products?category=power" },
-  { slug: "home", name: "Home", description: "Sound and ambience for spaces", href: "/products?category=lighting" },
-] as const;
+export function categoryName(slug: string, list: Category[] = []) {
+  return list.find((category) => category.slug === slug)?.name
+    ?? categories.find((category) => category.slug === slug)?.name
+    ?? slug;
+}
 
-export function categoryName(slug: string) {
-  return categories.find((category) => category.slug === slug)?.name ?? slug;
+export function categorySlugsForFilter(slug: string, list: Category[]): string[] {
+  if (!slug || slug === "all") return [];
+  const match = list.find((category) => category.slug === slug);
+  if (!match) return [slug];
+  const children = list.filter((category) => category.parentId === match.id).map((c) => c.slug);
+  return [match.slug, ...children];
+}
+
+export function browseFromCategories(list: Category[]) {
+  const roots = list.filter((category) => !category.parentId && !category.archived);
+  if (roots.length === 0) {
+    return categories.map((category) => ({
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      href: `/products?category=${category.slug}`,
+    }));
+  }
+  return roots.map((category) => ({
+    slug: category.slug,
+    name: category.name,
+    description: category.description,
+    href: `/products?category=${category.slug}`,
+  }));
 }

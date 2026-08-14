@@ -71,16 +71,25 @@ export function ProductDetail({
   reviews: Review[];
   related: Product[];
 }) {
-  const [variant, setVariant] = useState(product.variants[0]?.name ?? "Standard");
+  const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
+  const selected =
+    product.variants.find((item) => item.id === variantId) ?? product.variants[0];
   const [qty, setQty] = useState(1);
   const { addItem } = useCart();
   const { has, toggle } = useWishlist();
   const router = useRouter();
-  const out = product.stock <= 0;
+  const price = selected?.price ?? product.price;
+  const stock = selected?.stock ?? product.stock;
+  const out = stock <= 0;
   const wished = has(product.id);
 
   function addToCart() {
-    addItem({ product, variant, quantity: qty });
+    addItem({
+      product,
+      variant: selected?.name ?? "Standard",
+      variantId: selected?.id,
+      quantity: qty,
+    });
   }
 
   function buyNow() {
@@ -105,7 +114,7 @@ export function ProductDetail({
             <RatingStars rating={product.rating} count={product.reviewCount} size="md" />
           </div>
           <div className="mt-6 flex items-baseline gap-3">
-            <p className="text-2xl tabular-nums">{formatPrice(product.price)}</p>
+            <p className="text-2xl tabular-nums">{formatPrice(price)}</p>
             {product.compareAtPrice ? (
               <p className="text-muted-foreground line-through tabular-nums">
                 {formatPrice(product.compareAtPrice)}
@@ -125,10 +134,10 @@ export function ProductDetail({
                 <button
                   key={v.id}
                   type="button"
-                  onClick={() => setVariant(v.name)}
+                  onClick={() => setVariantId(v.id)}
                   className={cn(
                     "border px-4 py-2 text-sm transition-colors",
-                    variant === v.name
+                    variantId === v.id
                       ? "border-foreground bg-foreground text-background"
                       : "border-border hover:border-foreground"
                   )}
@@ -144,15 +153,15 @@ export function ProductDetail({
               value={qty}
               onChange={setQty}
               min={1}
-              max={Math.max(1, product.stock)}
+              max={Math.max(1, stock)}
             />
             <p
               className={cn(
                 "text-sm",
-                out ? "text-destructive" : product.stock <= 6 ? "text-ember" : "text-muted-foreground"
+                out ? "text-destructive" : stock <= 6 ? "text-ember" : "text-muted-foreground"
               )}
             >
-              {stockLabel(product.stock)}
+              {stockLabel(stock)}
             </p>
           </div>
 

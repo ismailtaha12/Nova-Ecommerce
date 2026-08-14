@@ -30,8 +30,16 @@ function customerLabel(profile: ProfileLite | undefined, fallback = "Customer") 
 }
 
 export async function attachCustomers(orders: Order[]): Promise<Order[]> {
-  const ids = [...new Set(orders.map((order) => order.userId).filter(Boolean))];
-  if (ids.length === 0) return orders;
+  const ids = [
+    ...new Set(orders.map((order) => order.userId).filter((id): id is string => Boolean(id))),
+  ];
+  if (ids.length === 0) {
+    return orders.map((order) => ({
+      ...order,
+      customerName: order.customerName || "Guest",
+      customerEmail: order.customerEmail ?? "",
+    }));
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -42,11 +50,11 @@ export async function attachCustomers(orders: Order[]): Promise<Order[]> {
 
   const profiles = new Map((data ?? []).map((row) => [row.id, row]));
   return orders.map((order) => {
-    const profile = profiles.get(order.userId);
+    const profile = order.userId ? profiles.get(order.userId) : undefined;
     return {
       ...order,
-      customerName: customerLabel(profile),
-      customerEmail: profile?.email ?? "",
+      customerName: profile ? customerLabel(profile) : order.customerName || "Guest",
+      customerEmail: profile?.email ?? order.customerEmail ?? "",
     };
   });
 }
