@@ -1,13 +1,6 @@
 # Nova
 
-**Nova** is a premium consumer-electronics storefront: product discovery, cart, checkout, customer accounts, and an admin dashboard. Catalog, auth, orders, reviews, wishlist, and inventory are stored in **Supabase (Postgres)**. Next.js 16 is the application backend — Server Components read data, Server Actions mutate it, and Row Level Security protects the database.
-
-Checkout creates a **pending** order, reserves variant stock, then Stripe (or demo mode) confirms payment. Shipping quotes and labels use Shippo when configured.
-
-Open the site at [http://localhost:3000](http://localhost:3000) after running the dev server.
-
-**Interview prep:** see [INTERVIEW_GUIDE.md](./INTERVIEW_GUIDE.md). **Working features (code map):** [FEATURES.md](./FEATURES.md). **Production handover:** see [DEPLOY.md](./DEPLOY.md).
-
+**Nova** is a premium consumer-electronics storefront: product discovery, cart, checkout, customer accounts, and an admin dashboard. Catalog, auth, orders, reviews, wishlist, and inventory are stored in **Supabase (Postgres)**. Next.js 16 is the application backend — Server Components read data, Server Actions mutate it, and Row Level Security protec
 ---
 
 ## Project overview
